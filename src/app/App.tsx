@@ -54,27 +54,38 @@ export default function App() {
     initPi();
   }, []);
 
-  // 2. معالجة البحث (تعديل لجلب بيانات حقيقية من الشبكة)
+  // 2. معالجة البحث (جلب بيانات حقيقية من Pi Testnet Blockchain)
   const handleWalletCheck = async (address: string) => {
     setLoading(true);
     try {
-      // تغيير الرابط إلى horizon.pi-blockchain.net للبيانات الحقيقية أو إبقاؤه testnet للتجربة
+      // الاتصال بشبكة التست نت الحقيقية
       const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${address}`);
+      
+      if (!response.ok) {
+        throw new Error("Wallet not found on Testnet");
+      }
+
       const data = await response.json();
 
-      let finalData = generateMockWalletData(address);
+      // استخراج البيانات الحقيقية من البلوكشين
+      const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance || "0";
+      const realSequence = parseInt(data.sequence) || 0;
 
-      if (data && data.balances) {
-        const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance;
-        if (realBalance) {
-          finalData.balance = parseFloat(realBalance);
-          finalData.totalTransactions = parseInt(data.sequence) || 0;
-          finalData.reputaScore = Math.min(Math.round((finalData.balance / 5) + 60), 100) * 10;
-        }
-      }
+      // دمج البيانات الحقيقية مع هيكل البيانات المطلوب
+      let finalData = generateMockWalletData(address);
+      finalData.balance = parseFloat(realBalance);
+      finalData.totalTransactions = realSequence;
+      
+      // تحديث السكور بناءً على الرصيد الفعلي المكتشف
+      finalData.reputaScore = Math.min(Math.round((finalData.balance / 5) + 65), 100) * 10;
+      
+      if (finalData.balance > 1000) finalData.trustLevel = 'Elite';
+      else if (finalData.balance > 100) finalData.trustLevel = 'High';
+
       setWalletData(finalData);
     } catch (err) {
-      console.warn("Using fallback mock data");
+      console.warn("Falling back to simulated data", err);
+      // في حال لم تكن المحفظة موجودة في التست نت، نستخدم البيانات الافتراضية
       setWalletData(generateMockWalletData(address));
     } finally {
       setLoading(false);
@@ -84,7 +95,7 @@ export default function App() {
   const handleReset = () => setWalletData(null);
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
-  // 3. تفعيل زر الدفع الحقيقي مع الربط بالخادم (الخطوة 2 المضافة)
+  // 3. تفعيل زر الدفع الحقيقي مع الربط بالخادم للموافقة
   const handleAccessUpgrade = async () => {
     if (!(window as any).Pi) return;
     try {
@@ -94,25 +105,22 @@ export default function App() {
         metadata: { userId: piUser?.uid }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
-          console.log("Payment created, sending to server for approval...", paymentId);
-          // استدعاء ملف api/approve.ts الذي أنشأناه في Vercel
+          // إرسال الطلب لملف api/approve.ts في Vercel لحل مشكلة "Dev not approved"
           try {
             await fetch('/api/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId })
             });
-            console.log("Server approved the payment successfully!");
           } catch (error) {
-            console.error("Server approval failed", error);
+            console.error("Server approval request failed", error);
           }
         },
         onReadyForServerCompletion: (paymentId: string, txid: string) => {
-          console.log("Blockchain transaction complete:", txid);
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
         },
-        onCancel: (paymentId: string) => { console.log("Payment cancelled by user"); },
+        onCancel: (paymentId: string) => { console.log("Cancelled"); },
         onError: (err: any) => { console.error("Payment Error:", err); }
       });
     } catch (err) {
@@ -148,7 +156,7 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {loading ? (
           <div className="text-center py-20 animate-pulse text-purple-600 font-medium">
-            Fetching Blockchain Data...
+            Fetching Real-time Blockchain Data...
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -175,7 +183,7 @@ export default function App() {
   );
 }
 
-// --- الدوال المساعدة (تبقى كما هي لضمان عمل الواجهة) ---
+// --- الدوال المساعدة (توليد بيانات تكميلية للواجهة) ---
 function generateMockWalletData(address: string): WalletData {
   const seed = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const random = (min: number, max: number) => {

@@ -6,6 +6,12 @@ import './styles/fonts.css';
 import './styles/tailwind.css';
 import './styles/theme.css';
 
+// --- إضافة كود تهيئة Pi Network ---
+if (typeof window !== 'undefined' && (window as any).Pi) {
+  (window as any).Pi.init({ version: "2.0", sandbox: false });
+}
+// --------------------------------
+
 // Error boundary for production
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },

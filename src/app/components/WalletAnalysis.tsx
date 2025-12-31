@@ -162,4 +162,4 @@ export function WalletAnalysis({ 
       />
     </div>
   );
-} 3ADIL CODE ANALYSIS BIMA YONASIB 
+}

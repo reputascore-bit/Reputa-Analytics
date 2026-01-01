@@ -137,40 +137,46 @@ export default function App() {
   };
 
   // --- 4. دالة الإرسال من محفظة التطبيق (App to User) - تجاوز الـ 10 معاملات ---
-  const handleManualTestnetTx = async () => {
-    if (!manualAddress.startsWith('G') || manualAddress.length !== 56) {
-      alert("الرجاء إدخال عنوان G صحيح");
-      return;
+  // استبدل الدالة القديمة في ملف App.tsx بهذا الكود المحدث
+const handleManualTestnetTx = async () => {
+  if (!manualAddress.startsWith('G') || manualAddress.length !== 56) {
+    alert("الرجاء إدخال عنوان G صحيح");
+    return;
+  }
+
+  setAdminLoading(true);
+
+  try {
+    // محاولة الاتصال بالسيرفر
+    const response = await fetch('/api/admin-pay', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        recipientAddress: manualAddress,
+        adminSecret: "123456" 
+      })
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      setTxCount(prev => prev + 1);
+      setManualAddress('');
+      alert(`✅ تم الإرسال من محفظة التطبيق بنجاح!\nTXID: ${result.txid.substring(0, 15)}...`);
+    } else {
+      // إظهار الخطأ القادم من السيرفر
+      alert(`❌ خطأ السيرفر: ${result.error || 'Unknown Error'}`);
     }
-
-    setAdminLoading(true);
-
-    try {
-      // هنا نقوم بمناداة السيرفر مباشرة ليقوم هو بالتوقيع والإرسال
-      const response = await fetch('/api/admin-pay', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          recipientAddress: manualAddress,
-          adminSecret: "123456" // تأكد من مطابقة هذا في ملف api/admin-pay.js
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setTxCount(prev => prev + 1);
-        setManualAddress('');
-        alert(`✅ تم الإرسال من محفظة التطبيق بنجاح!\nTXID: ${result.txid.substring(0, 15)}...`);
-      } else {
-        alert(`❌ فشل السيرفر: ${result.error}`);
-      }
-    } catch (err) {
-      alert("❌ خطأ في الاتصال بالسيرفر. تأكد من إعدادات Vercel.");
-    } finally {
-      setAdminLoading(false);
-    }
-  };
+  } catch (err) {
+    console.error("Fetch Error:", err);
+    alert("❌ فشل الاتصال بالسيرفر. تأكد من أن ملف api/admin-pay.js مرفوع في جذر المشروع (Root) وليس داخل src.");
+  } finally {
+    setAdminLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white pb-24 relative overflow-hidden text-slate-900">

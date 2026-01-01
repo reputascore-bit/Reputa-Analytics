@@ -1,33 +1,43 @@
 // api/admin-pay.js
-import { PiClient } from '@pinetwork-js/sdk';
+const { PiClient } = require('@pinetwork-js/sdk');
 
-// إعداد مفاتيح البيئة في Vercel Dashboard
+// تهيئة العميل باستخدام البيانات من Vercel Environment Variables
 const pi = new PiClient({
   apiKey: process.env.PI_API_KEY,
-  walletPrivateSeed: process.env.APP_WALLET_SEED // المفتاح السري لمحفظة التطبيق S...
+  walletPrivateSeed: process.env.APP_WALLET_SEED // المفتاح السري الذي يبدأ بـ S
 });
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-  
-  const { recipientAddress, amount, adminPassword } = req.body;
+  // السماح فقط بطلبات POST
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // حماية بسيطة للتأكد أنك أنت من يرسل الطلب
-  if (adminPassword !== "123456") { // استبدل هذا برقم سري خاص بك
-    return res.status(401).json({ error: "Unauthorized" });
+  const { recipientAddress } = req.body;
+
+  if (!recipientAddress) {
+    return res.status(400).json({ error: 'Recipient address is required' });
   }
 
   try {
+    // 1. إنشاء معاملة من نوع App-to-User
+    // ملاحظة: الـ uid هنا هو معرف وهمي لعملية الإدارة
     const payment = await pi.createPayment({
-      amount: amount || 0.1,
-      memo: "Testnet App-to-User Payment",
-      metadata: { recipient: recipientAddress },
-      uid: "admin-task-" + Date.now() 
+      amount: 0.1,
+      memo: "Mainnet Verification Flow - App to User",
+      metadata: { target: recipientAddress },
+      uid: "admin-verification-" + Date.now()
     });
 
+    // 2. توقيع وإرسال المعاملة فوراً باستخدام مفتاح التطبيق السري
     const txid = await pi.submitPayment(payment.identifier);
-    res.status(200).json({ success: true, txid });
+
+    // 3. إرجاع رقم المعاملة للتأكيد
+    return res.status(200).json({ 
+      success: true, 
+      txid: txid,
+      message: "العملية تمت بنجاح من محفظة التطبيق" 
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Payment Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 }

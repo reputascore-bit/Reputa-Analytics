@@ -37,6 +37,10 @@ export default function App() {
   const [piUser, setPiUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  // --- حالات جديدة للتحكم اليدوي في العمليات العشر ---
+  const [manualAddress, setManualAddress] = useState('');
+  const [txCount, setTxCount] = useState(0);
+
   // 1. تسجيل الدخول عبر Pi Network
   useEffect(() => {
     const initPi = async () => {
@@ -57,7 +61,7 @@ export default function App() {
     initPi();
   }, []);
 
-  // 2. معالجة البحث عن المحفظة (جلب بيانات حقيقية من السيرفر)
+  // 2. معالجة البحث عن المحفظة
   const handleWalletCheck = async (address: string) => {
     setLoading(true);
     const cleanAddress = address.trim();
@@ -67,7 +71,7 @@ export default function App() {
       const data = await response.json();
 
       if (!response.ok || data.error) {
-        alert("تنبيه: المحفظة غير موجودة في شبكة التست نت. تأكد من تفعيلها بإرسال عملات إليها أولاً.");
+        alert("تنبيه: المحفظة غير موجودة في شبكة التست نت.");
         throw new Error("Wallet Not Found");
       }
 
@@ -100,7 +104,7 @@ export default function App() {
 
     } catch (err) {
       console.error("Blockchain Fetch Error:", err);
-      alert("تعذر جلب البيانات الحقيقية من البلوكشين حالياً.");
+      alert("تعذر جلب البيانات الحقيقية.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +113,7 @@ export default function App() {
   const handleReset = () => setWalletData(null);
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
-  // 3. منطق الدفع الاحترافي (Approve -> Payment -> Complete)
+  // 3. منطق الدفع الاحترافي (VIP)
   const handleAccessUpgrade = async () => {
     if (!(window as any).Pi) {
       alert("الرجاء فتح التطبيق من داخل متصفح Pi");
@@ -138,87 +142,74 @@ export default function App() {
           
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
-          alert("🎉 تهانينا! تم تفعيل حساب Pro بنجاح.");
+          alert("🎉 تم تفعيل Pro.");
         },
-        onCancel: (paymentId: string) => console.log("Payment Cancelled:", paymentId),
-        onError: (err: any) => {
-          console.error("Payment Error:", err);
-          alert("حدث خطأ أثناء عملية الدفع. حاول مرة أخرى.");
-        }
+        onCancel: (paymentId: string) => console.log("Cancelled"),
+        onError: (err: any) => alert("خطأ في الدفع")
       });
     } catch (err) {
-      console.error("Payment Initiation Failed:", err);
+      console.error(err);
     }
   };
 
-  // ==========================================
-  // إضافة دالة تجاوز الـ 10 عمليات (تعديل جديد)
-  // ==========================================
-  const runMainnetRequirements = async () => {
-    const testAddresses = [
-      "GDH6V5W2N45LCH477HIKR5277RTM7S6K26T5S66O6S6S6S6S6S6S6S6S", // عينة
-      "GDBRT...","GCA7T...","GBV4R...","GDQ5L...",
-      "GBS2A...","GA6KJ...","GDA9B...","GC5S3...","GDX7E..."
-    ];
-
-    if (!(window as any).Pi) {
-      alert("Open in Pi Browser");
+  // --- دالة الإرسال اليدوي لتجاوز قيود الـ Mainnet ---
+  const handleManualTestnetTx = async () => {
+    if (!manualAddress.startsWith('G') || manualAddress.length !== 56) {
+      alert("الرجاء إدخال عنوان محفظة صحيح يبدأ بـ G");
       return;
     }
 
-    alert("Warning: You are about to initiate 10 payments. Sign each one in the wallet popup.");
+    if (!(window as any).Pi) return;
 
-    for (const addr of testAddresses) {
-      try {
-        await (window as any).Pi.createPayment({
-          amount: 0.1,
-          memo: "App-to-User Testnet Requirement",
-          metadata: { target: addr }
-        }, {
-          onReadyForServerApproval: async (paymentId: string) => {
-            await fetch('/api/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId })
-            });
-          },
-          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-            await fetch('/api/complete', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId, txid })
-            });
-          },
-          onCancel: (p: any) => console.log("Skipped address"),
-          onError: (e: any) => console.error("Error with address:", e)
-        });
-        await new Promise(r => setTimeout(r, 2000)); // توقف بسيط
-      } catch (err) {
-        console.error("Failed for:", addr);
-      }
+    try {
+      await (window as any).Pi.createPayment({
+        amount: 0.1,
+        memo: `Verification Tx #${txCount + 1}`,
+        metadata: { target: manualAddress }
+      }, {
+        onReadyForServerApproval: async (paymentId: string) => {
+          await fetch('/api/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId })
+          });
+        },
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          await fetch('/api/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid })
+          });
+          
+          setTxCount(prev => prev + 1);
+          setManualAddress(''); // مسح الحقل للعملية التالية
+          alert(`Success! Transaction ${txCount + 1} of 10 completed.`);
+        },
+        onCancel: () => console.log("User cancelled"),
+        onError: (err: any) => alert("Transaction failed. Check app wallet balance.")
+      });
+    } catch (err) {
+      console.error(err);
     }
-    alert("Process completed. Check Developer Portal in 24h.");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50 pb-24">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 flex items-center justify-center">
-                <img src={logoImage} alt="Logo" className="w-full h-full object-contain" />
-              </div>
+              <img src={logoImage} alt="Logo" className="w-10 h-10 object-contain" />
               <div>
                 <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                   Reputa Score
                 </h1>
-                <p className="text-xs text-gray-500">{piUser ? `@${piUser.username}` : 'v2.6 • Pi Network'}</p>
+                <p className="text-xs text-gray-500">{piUser ? `@${piUser.username}` : 'v2.6'}</p>
               </div>
             </div>
             {hasProAccess && (
-              <div className="px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg animate-bounce">
+              <div className="px-4 py-2 bg-yellow-400 rounded-full shadow-lg">
                 <span className="text-sm font-semibold text-white">Pro Member</span>
               </div>
             )}
@@ -231,7 +222,7 @@ export default function App() {
         {loading ? (
           <div className="text-center py-20 flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="animate-pulse text-purple-600 font-medium">Accessing Pi Testnet Blockchain...</p>
+            <p className="text-purple-600 font-medium font-mono text-sm tracking-tighter">Querying Pi Blockchain Ledger...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -246,21 +237,35 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16 py-6 text-center text-sm text-gray-500 relative">
-        © 2024-2026 Reputa Analytics. Powered by Pi Network Blockchain.
-        
-        {/* زر التجاوز المخفي - يظهر لك فقط عند الحاجة */}
-        <div className="absolute right-4 bottom-4 opacity-10 hover:opacity-100 transition-opacity">
-          <button 
-            onClick={runMainnetRequirements}
-            className="text-[10px] bg-red-500 text-white px-2 py-1 rounded"
-          >
-            FORCE 10 TX
-          </button>
-        </div>
+      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16 py-6 text-center text-sm text-gray-500">
+        © 2024-2026 Reputa Analytics.
       </footer>
 
-      {/* Modal */}
+      {/* --- لوحة التحكم اليدوية لتجاوز مرحلة الـ 10 عمليات --- */}
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white p-4 z-[9999] border-t-4 border-purple-600 shadow-2xl">
+        <div className="container mx-auto flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex-shrink-0 text-center sm:text-left">
+            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Mainnet Readiness</p>
+            <p className="text-lg font-black">{txCount} <span className="text-gray-500 text-xs">/ 10 Done</span></p>
+          </div>
+          
+          <input 
+            type="text"
+            value={manualAddress}
+            onChange={(e) => setManualAddress(e.target.value.toUpperCase().trim())}
+            placeholder="Paste User Wallet Address (G...)"
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-purple-500 w-full"
+          />
+          
+          <button 
+            onClick={handleManualTestnetTx}
+            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg shadow-purple-500/20"
+          >
+            Send 0.1 Pi
+          </button>
+        </div>
+      </div>
+
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
@@ -277,27 +282,10 @@ function generateMockWalletData(address: string): WalletData {
     const x = Math.sin(seed) * 10000;
     return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min;
   };
-
-  const transactions: Transaction[] = Array.from({ length: 10 }, (_, i) => ({
-      id: `tx_${seed}_${i}`,
-      type: random(0, 1) === 1 ? 'received' : 'sent',
-      amount: random(1, 50),
-      from: generateRandomAddress(seed + i),
-      to: generateRandomAddress(seed + i + 1),
-      timestamp: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
-  }));
-
   return {
-    address,
-    balance: 0, 
-    accountAge: random(45, 800),
-    transactions,
-    totalTransactions: 0,
-    reputaScore: 650,
-    trustLevel: 'Medium',
-    consistencyScore: random(70, 95),
-    networkTrust: random(65, 98),
-    riskLevel: 'Low'
+    address, balance: 0, accountAge: random(45, 800),
+    transactions: [], totalTransactions: 0, reputaScore: 650,
+    trustLevel: 'Medium', consistencyScore: 80, networkTrust: 80, riskLevel: 'Low'
   };
 }
 

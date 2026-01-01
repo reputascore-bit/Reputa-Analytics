@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@pinetwork-js/sdk": "^2.0.0",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
@@ -75,16 +76,10 @@
     "react-dom": "18.3.1"
   },
   "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
+    "react": { "optional": true },
+    "react-dom": { "optional": true }
   },
   "pnpm": {
-    "overrides": {
-      "vite": "6.3.5"
-    }
+    "overrides": { "vite": "6.3.5" }
   }
 }

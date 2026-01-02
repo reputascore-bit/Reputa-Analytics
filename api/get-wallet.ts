@@ -6,7 +6,13 @@ interface WalletRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // إضافة رؤوس الاستجابة الأساسية لضمان عمل الـ API في البيئة السحابية
+  // 1. إعدادات CORS (ضرورية لعمل الـ API مع تطبيقات React/Vite)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // معالجة طلبات التمهيد (Preflight requests)
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -24,11 +30,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // نفس الهيكل الأصلي للبيانات مع ضمان تعريف process.env بشكل صحيح
+    // 2. الحفاظ على الهيكل الأصلي للمحاكاة (Mock Data)
     const mockWalletData = {
       walletAddress: walletAddress || `G${Math.random().toString(36).substring(2, 56).toUpperCase()}`,
       balance: parseFloat((Math.random() * 1000).toFixed(2)),
-      network: process.env.PI_NETWORK || 'testnet',
+      network: (process.env.PI_NETWORK as string) || 'testnet', // تأكيد النوع لـ TypeScript
       userId: userId || 'mock_user',
       lastUpdated: new Date().toISOString(),
       transactions: {

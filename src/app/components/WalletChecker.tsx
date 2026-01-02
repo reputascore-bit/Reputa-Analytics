@@ -16,28 +16,40 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate wallet address
-    if (!address.trim()) {
+    // تنظيف العنوان من المسافات الزائدة
+    const cleanAddress = address.trim();
+
+    // القواعد الصارمة لعناوين محفظة Pi Network
+    if (!cleanAddress) {
       setError('Please enter a wallet address');
       return;
     }
 
-    if (!address.startsWith('G')) {
+    // عناوين Pi تبدأ دائماً بحرف G وتتكون من 56 حرفاً
+    if (!cleanAddress.startsWith('G')) {
       setError('Pi Network addresses must start with "G"');
       return;
     }
 
-    if (address.length < 20) {
-      setError('Invalid wallet address format');
+    if (cleanAddress.length !== 56) {
+      setError('Invalid address length. Pi addresses are exactly 56 characters.');
+      return;
+    }
+
+    // التحقق من أن العنوان يحتوي فقط على أحرف وأرقام صالحة (Base32)
+    const base32Regex = /^[A-Z2-7]+$/;
+    if (!base32Regex.test(cleanAddress)) {
+      setError('Invalid characters detected in wallet address.');
       return;
     }
 
     setError('');
-    onCheck(address.trim());
+    onCheck(cleanAddress);
   };
 
   const handleTryDemo = () => {
-    const demoAddress = 'GBEXAMPLEPINETWORKWALLETADDRESS123456789ABCDEFGH';
+    // عنوان تجريبي حقيقي الشكل للاختبار
+    const demoAddress = 'GDBA76X636J5U6P3TKYL7O6XF7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7';
     setAddress(demoAddress);
     setError('');
     onCheck(demoAddress);
@@ -45,7 +57,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Hero Section */}
+      {/* Hero Section - الهيكل الأصلي تماماً */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center justify-center mb-6 relative">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 blur-3xl rounded-full"></div>
@@ -79,23 +91,23 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
                 id="wallet-address"
                 type="text"
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                className="pr-12 h-14 text-lg font-mono"
+                onChange={(e) => setAddress(e.target.value.toUpperCase())} // تحويل تلقائي للأحرف الكبيرة لتسهيل الإدخال
+                placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                className="pr-12 h-14 text-lg font-mono uppercase"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <Search className="w-5 h-5 text-gray-400" />
               </div>
             </div>
             {error && (
-              <p className="mt-2 text-sm text-red-600">{error}</p>
+              <p className="mt-2 text-sm text-red-600 font-medium animate-pulse">{error}</p>
             )}
           </div>
 
           <div className="flex gap-3">
             <Button 
               type="submit" 
-              className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+              className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg active:scale-95"
             >
               Analyze Wallet
             </Button>
@@ -103,7 +115,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
               type="button" 
               variant="outline" 
               onClick={handleTryDemo}
-              className="h-12"
+              className="h-12 border-2 hover:bg-gray-50"
             >
               Try Demo
             </Button>
@@ -124,9 +136,9 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         </div>
       </Card>
 
-      {/* Features Grid */}
+      {/* Features Grid - تم الإبقاء عليها كما هي بصرياً */}
       <div className="grid md:grid-cols-3 gap-6 mt-12">
-        <Card className="p-6 text-center">
+        <Card className="p-6 text-center hover:border-purple-300 transition-colors">
           <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6 text-purple-600" />
           </div>
@@ -136,7 +148,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           </p>
         </Card>
 
-        <Card className="p-6 text-center">
+        <Card className="p-6 text-center hover:border-blue-300 transition-colors">
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -148,7 +160,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           </p>
         </Card>
 
-        <Card className="p-6 text-center">
+        <Card className="p-6 text-center hover:border-yellow-300 transition-colors">
           <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

@@ -9,6 +9,17 @@ interface AuthRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // إضافة رؤوس CORS الضرورية للسماح بعملية تسجيل الدخول من المتصفح
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // التعامل مع طلب OPTIONS (Preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -23,16 +34,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Verify Pi Network access token
-    // In production, verify against Pi Network API
-    const API_KEY = process.env.VITE_PI_API_KEY || '';
+    // الحفاظ على الهيكل الأصلي مع ضمان عدم حدوث خطأ بسبب Variable undefined
+    const API_KEY = (process.env.VITE_PI_API_KEY as string) || '';
     
-    // Mock verification for development
-    // Replace with actual Pi Network API verification
     console.log('[AUTH] Verifying token for user:', user?.username);
 
-    // Simulate token verification
-    const verified = true; // In production: verify with Pi Network API
+    // محاكاة التحقق (Mock verification) كما في الكود الأصلي
+    const verified = true;
 
     if (!verified) {
       return res.status(401).json({ 
@@ -41,14 +49,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Create or update user session
+    // الحفاظ على بيانات الجلسة (Session Data) كما هي تماماً
     const sessionData = {
       userId: user?.uid || `user_${Date.now()}`,
       username: user?.username || 'Anonymous',
-      accessToken, // Store securely in production
+      accessToken,
       authenticated: true,
       createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     };
 
     console.log('[AUTH SUCCESS]', { 

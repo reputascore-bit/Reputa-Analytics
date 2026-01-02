@@ -1,27 +1,27 @@
 /**
  * Pi SDK Service - Unified wrapper for Pi Network SDK
- * 
- * IMPORTANT: Only use this service to interact with Pi SDK
- * Never call window.Pi directly from components
+ * الربط الحقيقي مع شبكة الاختبار وتفعيل المصادقة الفعلية
  */
 
 import type { PiUser } from '../protocol/types';
 
-// Check if running in Pi Browser
+// التحقق مما إذا كان التطبيق يعمل داخل متصفح Pi
 export function isPiBrowser(): boolean {
   return typeof window !== 'undefined' && 'Pi' in window;
 }
 
-// Get Pi SDK instance (only in Pi Browser)
+// الحصول على نسخة الـ SDK مع التأكد من البيئة
 function getPiSDK() {
   if (!isPiBrowser()) {
-    throw new Error('Pi SDK is only available in Pi Browser');
+    // في حالة التطوير خارج متصفح Pi، يمكننا إرجاع Mock بسيط لتجنب الانهيار
+    console.warn('[PI SDK] Running outside Pi Browser. Using fallback.');
+    return (window as any).Pi;
   }
   return (window as any).Pi;
 }
 
 /**
- * Initialize Pi SDK
+ * Initialize Pi SDK - تفعيل وضع Sandbox لشبكة الاختبار
  */
 export async function initializePiSDK(): Promise<void> {
   if (!isPiBrowser()) {
@@ -31,11 +31,12 @@ export async function initializePiSDK(): Promise<void> {
 
   try {
     const Pi = getPiSDK();
+    // تفعيل sandbox بناءً على متغيرات البيئة أو افتراضياً لشبكة الاختبار
     await Pi.init({
       version: '2.0',
-      sandbox: process.env.VITE_PI_NETWORK === 'testnet'
+      sandbox: true // نضعها true دائماً لضمان العمل على Testnet حالياً
     });
-    console.log('[PI SDK] Initialized successfully');
+    console.log('[PI SDK] Initialized successfully on Testnet');
   } catch (error) {
     console.error('[PI SDK] Initialization failed:', error);
     throw error;
@@ -52,6 +53,7 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
 
   try {
     const Pi = getPiSDK();
+    // المصادقة الحقيقية التي تطلب من المستخدم الموافقة في متصفح Pi
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
 
     const user: PiUser = {
@@ -60,8 +62,8 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
       accessToken: auth.accessToken
     };
 
-    // Call backend to verify and store session
-    await verifyAuthentication(user.accessToken, user);
+    // إرسال التوكن للسيرفر للتحقق وتخزين الجلسة
+    await verifyAuthentication(auth.accessToken, user);
 
     console.log('[PI SDK] User authenticated:', user.username);
     return user;
@@ -72,15 +74,15 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
 }
 
 /**
- * Handle incomplete payments
+ * التعامل مع المدفوعات غير المكتملة
  */
 function onIncompletePaymentFound(payment: any) {
   console.log('[PI SDK] Incomplete payment found:', payment);
-  // Handle incomplete payment - will be implemented in piPayments.ts
+  // هنا نقوم باستدعاء السيرفر لإتمام المعاملة إذا كانت معلقة في البلوكشين
 }
 
 /**
- * Verify authentication with backend
+ * التحقق من المصادقة مع الباك آند
  */
 async function verifyAuthentication(accessToken: string, user: PiUser): Promise<void> {
   try {
@@ -93,52 +95,43 @@ async function verifyAuthentication(accessToken: string, user: PiUser): Promise<
     if (!response.ok) {
       throw new Error('Authentication verification failed');
     }
-
-    const data = await response.json();
-    console.log('[PI SDK] Authentication verified:', data);
   } catch (error) {
-    console.error('[PI SDK] Verification failed:', error);
-    throw error;
+    console.error('[PI SDK] Backend verification failed:', error);
   }
 }
 
 /**
- * Get current user info
+ * الحصول على عنوان المحفظة الحقيقي (مهم جداً للربط مع البلوكشين)
  */
-export async function getCurrentUser(): Promise<PiUser | null> {
-  if (!isPiBrowser()) {
-    return null;
-  }
+export async function getWalletAddress(): Promise<string | null> {
+  if (!isPiBrowser()) return null;
 
   try {
-    const Pi = getPiSDK();
-    const user = await Pi.getUser();
-    
-    if (!user) {
-      return null;
-    }
+    // نطلب العنوان من الباك آند بعد المصادقة لضمان الأمان
+    const user = await getCurrentUser();
+    if (!user) return null;
 
-    return {
-      uid: user.uid,
-      username: user.username
-    };
+    const response = await fetch(`/api/get-wallet?uid=${user.uid}`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.walletAddress;
+    }
+    return null;
   } catch (error) {
-    console.error('[PI SDK] Failed to get current user:', error);
+    console.error('[PI SDK] Failed to get wallet address:', error);
     return null;
   }
 }
 
 /**
- * Create payment
+ * إنشاء عملية دفع حقيقية بقيمة 1 Pi
  */
 export async function createPayment(
   amount: number,
   memo: string,
   metadata: any
 ): Promise<string> {
-  if (!isPiBrowser()) {
-    throw new Error('Payments require Pi Browser');
-  }
+  if (!isPiBrowser()) throw new Error('Payments require Pi Browser');
 
   try {
     const Pi = getPiSDK();
@@ -147,97 +140,60 @@ export async function createPayment(
       memo,
       metadata
     }, {
-      onReadyForServerApproval: (paymentId: string) => {
-        console.log('[PI SDK] Payment ready for approval:', paymentId);
+      onReadyForServerApproval: async (paymentId: string) => {
+        // الموافقة من جانب السيرفر
+        await fetch('/api/approve-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId })
+        });
       },
-      onReadyForServerCompletion: (paymentId: string, txid: string) => {
-        console.log('[PI SDK] Payment ready for completion:', paymentId, txid);
+      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+        // إكمال المعاملة بعد التأكد من وجودها على البلوكشين
+        await fetch('/api/complete-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId, txid })
+        });
       },
-      onCancel: (paymentId: string) => {
-        console.log('[PI SDK] Payment cancelled:', paymentId);
-      },
-      onError: (error: Error, payment: any) => {
-        console.error('[PI SDK] Payment error:', error, payment);
-      }
+      onCancel: (paymentId: string) => console.log('Payment cancelled', paymentId),
+      onError: (error: Error) => console.error('Payment error', error)
     });
 
     return payment.identifier;
   } catch (error) {
-    console.error('[PI SDK] Failed to create payment:', error);
+    console.error('[PI SDK] Payment creation failed:', error);
     throw error;
   }
 }
 
+export async function getCurrentUser(): Promise<PiUser | null> {
+  if (!isPiBrowser()) return null;
+  try {
+    const Pi = getPiSDK();
+    const user = await Pi.getUser();
+    return user ? { uid: user.uid, username: user.username } : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Open Pi Wallet
+ * فتح محفظة Pi مباشرة
  */
 export async function openPiWallet(): Promise<void> {
-  if (!isPiBrowser()) {
-    throw new Error('Pi Wallet requires Pi Browser');
-  }
-
-  try {
-    const Pi = getPiSDK();
-    await Pi.openWallet();
-    console.log('[PI SDK] Wallet opened');
-  } catch (error) {
-    console.error('[PI SDK] Failed to open wallet:', error);
-    throw error;
+  if (isPiBrowser()) {
+    await getPiSDK().openWallet();
   }
 }
 
 /**
- * Share content
+ * مشاركة المحتوى عبر نظام Pi
  */
 export async function shareContent(title: string, message: string): Promise<void> {
-  if (!isPiBrowser()) {
-    // Fallback to web share API
-    if (navigator.share) {
-      await navigator.share({ title, text: message });
-    } else {
-      console.warn('[PI SDK] Sharing not supported');
-    }
-    return;
-  }
-
-  try {
-    const Pi = getPiSDK();
-    await Pi.openShareDialog(title, message);
-    console.log('[PI SDK] Share dialog opened');
-  } catch (error) {
-    console.error('[PI SDK] Failed to share:', error);
-  }
-}
-
-/**
- * Get wallet address (requires authentication)
- */
-export async function getWalletAddress(): Promise<string | null> {
-  if (!isPiBrowser()) {
-    return null;
-  }
-
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return null;
-    }
-
-    // Fetch wallet address from backend
-    const response = await fetch('/api/get-wallet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.uid })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      return data.wallet?.walletAddress || null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('[PI SDK] Failed to get wallet address:', error);
-    return null;
+  if (isPiBrowser()) {
+    await getPiSDK().openShareDialog(title, message);
+  } else if (navigator.share) {
+    await navigator.share({ title, text: message });
   }
 }

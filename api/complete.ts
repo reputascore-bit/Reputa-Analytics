@@ -8,6 +8,17 @@ interface CompleteRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // إضافة رؤوس CORS للسماح لمتصفح المستخدم بإرسال طلبات POST بنجاح
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // التعامل مع طلب OPTIONS (Preflight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -22,17 +33,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Verify transaction on blockchain (implement actual verification)
-    // For testnet, we can simulate verification
+    // الحفاظ على المنطق الأصلي كما هو دون تغيير
     console.log(`[COMPLETE] Payment ${paymentId}, TXID: ${txid}, User: ${userId}`);
 
-    // Here you would:
-    // 1. Verify transaction on Pi blockchain
-    // 2. Update user's VIP status in database
-    // 3. Update reputation score
-    // 4. Send confirmation notification
-
-    // Simulate database update
+    // محاكاة تحديث قاعدة البيانات (بنفس الهيكل الأصلي)
     const subscriptionData = {
       userId,
       paymentId,
@@ -42,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status: 'completed',
       startDate: new Date().toISOString(),
       endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
-      reputationBonus: 50 // VIP users get bonus reputation points
+      reputationBonus: 50
     };
 
     console.log('[SUBSCRIPTION UPDATED]', subscriptionData);

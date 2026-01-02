@@ -1,5 +1,5 @@
 /**
- * Pi Payment Module - Handle Pi Network payments
+ * Pi Payment Module - Handle Pi Network Testnet payments
  */
 
 import type { PaymentData } from './types';
@@ -18,7 +18,7 @@ export function isPiAvailable(): boolean {
 }
 
 /**
- * Initialize Pi SDK
+ * Initialize Pi SDK - التأكد من النسخة والتشغيل
  */
 export async function initializePi(): Promise<void> {
   if (!isPiAvailable()) {
@@ -27,6 +27,7 @@ export async function initializePi(): Promise<void> {
   }
   
   try {
+    // إصدار 2.0 هو المستقر حالياً للتعامل مع المدفوعات
     await window.Pi!.init({ version: '2.0' });
     console.log('[PI PAYMENT] SDK initialized');
   } catch (error) {
@@ -36,7 +37,7 @@ export async function initializePi(): Promise<void> {
 }
 
 /**
- * Authenticate user
+ * Authenticate user - جلب البيانات الحقيقية للمستخدم
  */
 export async function authenticate(): Promise<{ uid: string; username: string }> {
   if (!isPiAvailable()) {
@@ -58,7 +59,7 @@ export async function authenticate(): Promise<{ uid: string; username: string }>
 }
 
 /**
- * Create VIP payment (1 Pi)
+ * Create VIP payment (1 Pi) - ربط الدفع بشبكة Testnet
  */
 export async function createVIPPayment(userId: string): Promise<PaymentData> {
   if (!isPiAvailable()) {
@@ -66,17 +67,20 @@ export async function createVIPPayment(userId: string): Promise<PaymentData> {
   }
   
   try {
+    // استدعاء واجهة الدفع الحقيقية من Pi SDK
     const payment = await window.Pi!.createPayment({
       amount: 1,
-      memo: 'Reputa Score VIP Subscription - 1 Year',
-      metadata: { type: 'vip_subscription', userId }
+      memo: 'Reputa Score VIP Subscription - Testnet',
+      metadata: { type: 'vip_subscription', userId, network: 'testnet' }
     }, {
       onReadyForServerApproval: (paymentId: string) => {
         console.log('[PI PAYMENT] Ready for approval:', paymentId);
+        // إبلاغ السيرفر للموافقة (Approve)
         approvePayment(paymentId, userId, 1);
       },
       onReadyForServerCompletion: (paymentId: string, txid: string) => {
         console.log('[PI PAYMENT] Ready for completion:', paymentId, txid);
+        // إبلاغ السيرفر باكتمال النقل على البلوكشين (Complete)
         completePayment(paymentId, txid, userId, 1);
       },
       onCancel: (paymentId: string) => {
@@ -101,7 +105,7 @@ export async function createVIPPayment(userId: string): Promise<PaymentData> {
 }
 
 /**
- * Approve payment (backend call)
+ * Approve payment (backend call) - الحفاظ على نفس المسار
  */
 async function approvePayment(
   paymentId: string,
@@ -112,14 +116,14 @@ async function approvePayment(
     const response = await fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, userId, amount })
+      body: JSON.stringify({ paymentId, userId, amount, network: 'testnet' })
     });
     
     if (!response.ok) {
       throw new Error('Approval failed');
     }
     
-    console.log('[PI PAYMENT] Approved');
+    console.log('[PI PAYMENT] Approved on backend');
   } catch (error) {
     console.error('[PI PAYMENT] Approval error:', error);
   }
@@ -138,7 +142,7 @@ async function completePayment(
     const response = await fetch('/api/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, txid, userId, amount })
+      body: JSON.stringify({ paymentId, txid, userId, amount, network: 'testnet' })
     });
     
     if (!response.ok) {
@@ -146,29 +150,23 @@ async function completePayment(
     }
     
     const data = await response.json();
-    console.log('[PI PAYMENT] Completed:', data);
+    console.log('[PI PAYMENT] Completed successfully:', data);
     
-    // Update local VIP status
+    // تحديث الحالة محلياً كما هو في منطقك الأصلي
     localStorage.setItem(`vip_${userId}`, JSON.stringify({
       active: true,
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
     }));
   } catch (error) {
     console.error('[PI PAYMENT] Completion error:', error);
   }
 }
 
-/**
- * Handle incomplete payments
- */
 function onIncompletePayment(payment: any): void {
   console.log('[PI PAYMENT] Incomplete payment found:', payment);
-  // Resume payment flow
+  // يمكن هنا استدعاء /api/incomplete لإغلاق العمليات المعلقة
 }
 
-/**
- * Check VIP status
- */
 export function checkVIPStatus(userId: string): boolean {
   const vipData = localStorage.getItem(`vip_${userId}`);
   if (!vipData) return false;

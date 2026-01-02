@@ -1,5 +1,6 @@
 /**
- * Report Module - Generate reputation reports (VIP/Regular)
+ * Report Module - Generate reputation reports (VIP/Regular) 
+ * Updated to reflect real Testnet data logic
  */
 
 import type { ReputationReport, WalletData, StakingData, MiningData, Alert } from './types';
@@ -7,6 +8,7 @@ import { calculateReputationScore, determineTrustLevel } from './scoring';
 
 /**
  * Generate comprehensive reputation report
+ * يستخدم الآن البيانات الحقيقية الممررة من دالة fetchWalletData
  */
 export function generateReport(
   userId: string,
@@ -15,6 +17,7 @@ export function generateReport(
   miningData?: MiningData,
   isVIP: boolean = false
 ): ReputationReport {
+  // الحساب يعتمد الآن على الأرقام الحقيقية (الرصيد، عدد العمليات، عمر الحساب)
   const scores = calculateReputationScore(walletData, stakingData, miningData);
   const trustLevel = determineTrustLevel(scores.totalScore);
   const alerts = generateAlerts(walletData, stakingData, miningData, scores);
@@ -36,6 +39,7 @@ export function generateReport(
 
 /**
  * Format VIP report (full details)
+ * يظهر جميع المعاملات الحقيقية الـ 10 التي جلبناها من البلوكشين
  */
 export function formatVIPReport(report: ReputationReport): any {
   return {
@@ -44,6 +48,7 @@ export function formatVIPReport(report: ReputationReport): any {
       full: report.walletData.transactions.map(tx => ({
         ...tx,
         scoreDetails: tx.score,
+        // وسم المعاملات المشبوهة بناءً على منطق السمعة الخاص بك
         flagged: tx.score && tx.score.suspiciousPenalty < 0
       })),
       count: report.walletData.transactions.length
@@ -54,6 +59,7 @@ export function formatVIPReport(report: ReputationReport): any {
 
 /**
  * Format regular report (limited to last 3 transactions)
+ * يطبق القيود على المستخدمين العاديين مع الحفاظ على البيانات الحقيقية
  */
 export function formatRegularReport(report: ReputationReport): any {
   return {
@@ -64,6 +70,7 @@ export function formatRegularReport(report: ReputationReport): any {
     totalScore: report.scores.totalScore,
     trustLevel: report.trustLevel,
     transactions: {
+      // اقتطاع أول 3 معاملات فقط من البيانات الحقيقية
       limited: report.walletData.transactions.slice(0, 3).map(tx => ({
         id: tx.id,
         timestamp: tx.timestamp,
@@ -84,7 +91,7 @@ export function formatRegularReport(report: ReputationReport): any {
 }
 
 /**
- * Generate alerts based on analysis
+ * Generate alerts based on real blockchain analysis
  */
 function generateAlerts(
   walletData: WalletData,
@@ -94,56 +101,44 @@ function generateAlerts(
 ): Alert[] {
   const alerts: Alert[] = [];
   
-  // Mining verification alerts
+  // تنبيهات تعدين Pi الحقيقية
   if (miningData) {
     if (miningData.verificationStatus === 'verified') {
       alerts.push({
         type: 'success',
-        message: 'Year with Pi verified successfully',
+        message: 'Mining behavior verified',
         timestamp: new Date(),
-        details: `Mining bonus unlocked: +${miningData.score} points`
+        details: `Consistency bonus applied: +${miningData.score} points`
       });
     } else if (miningData.verificationStatus === 'suspicious') {
       alerts.push({
         type: 'warning',
-        message: 'Mining data verification failed',
+        message: 'Mining pattern inconsistency',
         timestamp: new Date(),
         details: miningData.explanation
       });
     }
   }
   
-  // Suspicious transactions
-  const suspicious = walletData.transactions.filter(
-    tx => tx.score && tx.score.suspiciousPenalty < 0
-  );
-  if (suspicious.length > 0) {
-    alerts.push({
-      type: 'warning',
-      message: `${suspicious.length} suspicious transaction(s) detected`,
-      timestamp: new Date(),
-      details: 'Review flagged transactions in detailed report'
-    });
-  }
-  
-  // External transactions warning
+  // تحليل المعاملات الخارجية الحقيقية (External)
+  // في Testnet، المعاملات الخارجية غالباً ما تشير إلى سحوبات خارج بيئة التطبيقات
   const external = walletData.transactions.filter(tx => tx.type === 'external');
   if (external.length > 3) {
     alerts.push({
       type: 'info',
-      message: `${external.length} external transactions found`,
+      message: 'High external activity',
       timestamp: new Date(),
-      details: 'External transactions negatively impact reputation'
+      details: 'Frequent external transfers reduce ecosystem trust score'
     });
   }
   
-  // Staking recommendation
-  if (!stakingData || stakingData.amount < 10) {
+  // تنبيه الرصيد المنخفض (إضافة جديدة للمنطق الحقيقي)
+  if (walletData.balance < 1) {
     alerts.push({
-      type: 'info',
-      message: 'No active staking detected',
+      type: 'warning',
+      message: 'Low wallet balance',
       timestamp: new Date(),
-      details: 'Stake Pi to earn up to +30 reputation points'
+      details: 'Insufficient balance might affect transaction reputation'
     });
   }
   
@@ -156,32 +151,25 @@ function generateAlerts(
 function generateInsights(report: ReputationReport): string[] {
   const insights: string[] = [];
   
-  const internalRatio = report.scores.breakdown.transactions.internal / 
-                       report.scores.breakdown.transactions.total;
+  const totalTx = report.walletData.totalTransactions || 1;
+  const internalTx = report.walletData.transactions.filter(t => t.type === 'internal').length;
+  const internalRatio = internalTx / Math.min(report.walletData.transactions.length, 10);
   
-  if (internalRatio > 0.8) {
-    insights.push('Excellent! You primarily use Pi Network internal apps.');
-  } else if (internalRatio < 0.5) {
-    insights.push('Consider using more Pi Network internal services to improve reputation.');
+  if (internalRatio > 0.7) {
+    insights.push('Strong Ecosystem Integration: Most of your Pi movement is within internal apps.');
   }
   
-  if (report.stakingData && report.stakingData.amount > 0) {
-    insights.push(`You're staking ${report.stakingData.amount} Pi. Great commitment!`);
-  } else {
-    insights.push('Staking Pi can add up to 30 reputation points.');
+  if (report.walletData.balance > 100) {
+    insights.push('Significant Holder: Your balance indicates long-term commitment to the network.');
   }
-  
+
   if (report.miningData) {
-    const consistency = (1 - (report.miningData.absenceDays / report.miningData.totalDays)) * 100;
-    insights.push(`Mining consistency: ${consistency.toFixed(1)}%. Keep it up!`);
+    insights.push(`Mining Activity: You have ${report.miningData.totalDays} days of recorded history.`);
   }
   
   return insights;
 }
 
-/**
- * Export report as JSON
- */
 export function exportReportJSON(report: ReputationReport, isVIP: boolean): string {
   const formatted = isVIP ? formatVIPReport(report) : formatRegularReport(report);
   return JSON.stringify(formatted, null, 2);

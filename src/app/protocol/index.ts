@@ -1,11 +1,10 @@
 /**
  * Reputa Protocol - Unified Entry Point
- * 
- * This is the main interface for the Reputation Protocol.
- * Import from here to use protocol features.
+ * * الموزع الرئيسي لبروتوكول السمعة.
+ * يتم استدعاء كافة الميزات الحقيقية (Testnet/SDK) من هنا.
  */
 
-// Core Functions
+// Core Functions - يتم تصدير الدوال التي تم ربطها بالبلوكشين والـ SDK
 export { fetchWalletData, fetchUsername } from './wallet';
 export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions';
 export { analyzeStaking, estimateStaking } from './staking';
@@ -15,7 +14,7 @@ export { calculateReputationScore, determineTrustLevel } from './scoring';
 export { generateReport, formatVIPReport, formatRegularReport, exportReportJSON } from './report';
 export { initializePi, authenticate, createVIPPayment, checkVIPStatus, isPiAvailable } from './piPayment';
 
-// Types
+// Types - تصدير الأنواع لضمان توافق TypeScript في المشروع
 export type {
   Transaction,
   TransactionScore,
@@ -30,7 +29,7 @@ export type {
   PaymentData
 } from './types';
 
-// Complete workflow
+// Complete workflow 
 import { fetchWalletData } from './wallet';
 import { estimateStaking } from './staking';
 import { generateReport } from './report';
@@ -38,6 +37,7 @@ import type { ReputationReport, MiningData } from './types';
 
 /**
  * Generate complete reputation report
+ * تم تحويلها لدالة Async لضمان انتظار البيانات الحقيقية من Testnet
  */
 export async function generateCompleteReport(
   walletAddress: string,
@@ -45,9 +45,14 @@ export async function generateCompleteReport(
   miningData?: MiningData,
   isVIP: boolean = false
 ): Promise<ReputationReport> {
+  
+  // 1. جلب بيانات المحفظة الحقيقية (رصيد، معاملات، تسلسل) من البلوكشين
   const walletData = await fetchWalletData(walletAddress);
+  
+  // 2. تقدير بيانات الـ Staking بناءً على الرصيد الحقيقي المجلوب
   const stakingData = estimateStaking(walletData.balance, walletData.accountAge);
   
+  // 3. بناء التقرير النهائي بدمج البيانات الحقيقية مع منطق السمعة (Scoring)
   return generateReport(
     userId || walletData.username || 'anonymous',
     walletData,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; 
 import { motion } from 'motion/react';
 import { ShieldCheck, ShieldAlert, ShieldBan, Sparkles } from 'lucide-react';
 import { Card } from './ui/card';

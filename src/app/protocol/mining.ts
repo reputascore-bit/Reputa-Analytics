@@ -1,4 +1,4 @@
-/**
+/** 
  * Mining Module - OCR and mining bonus calculation
  */
 

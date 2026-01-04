@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
@@ -24,17 +25,20 @@ function ReputaAppContent() {
 
   const isPiBrowser = typeof (window as any).Pi !== 'undefined';
 
+  // 1. إصلاح الربط وجلب اسم المستخدم فور الدخول
   useEffect(() => {
     const setup = async () => {
       if (isPiBrowser) {
         try {
-          // تعديل: التأكد من نجاح التهيئة قبل طلب المستخدم
           await initializePi();
-          const user = await getCurrentUser();
-          if (user) {
-            setUserName(user.username);
-            // جلب حالة الـ VIP الحقيقية
-            const vipStatus = await isVIPUser(user.uid);
+          // طلب المصادقة فوراً لحل مشكلة "Please authenticate first"
+          const auth = await (window as any).Pi.authenticate(['username', 'payments'], (payment: any) => {
+            console.log("Payment in progress...", payment);
+          });
+          
+          if (auth && auth.user) {
+            setUserName(auth.user.username);
+            const vipStatus = await isVIPUser(auth.user.uid);
             setHasProAccess(!!vipStatus);
           }
         } catch (error) {
@@ -53,7 +57,6 @@ function ReputaAppContent() {
     try {
       let realData;
       if (isPiBrowser) {
-        // جلب البيانات من Testnet
         realData = await fetchWalletData(address);
       } else {
         realData = {
@@ -75,8 +78,7 @@ function ReputaAppContent() {
       setWalletData(mappedData);
       setCurrentWalletAddress(address);
     } catch (error) {
-      // إظهار تنبيه واضح للخطأ التقني
-      alert("Blockchain Sync Error: Check your connection or Wallet Address.");
+      alert("Blockchain Sync Error: Check connection or address.");
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +91,7 @@ function ReputaAppContent() {
 
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
-  // تعديل: تفعيل زر الدفع الحقيقي لشبكة باي
+  // 2. إصلاح الدفع لضمان عدم انتهاء الجلسة
   const handleAccessUpgrade = async () => {
     if (isPiBrowser) {
       try {
@@ -97,10 +99,11 @@ function ReputaAppContent() {
         if (payment) {
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
+          // تحديث البيانات فور نجاح الدفع
           if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
         }
       } catch (err) {
-        alert("Payment was not completed.");
+        alert("Payment was not completed. Please try again from Pi Browser.");
       }
     } else {
       setHasProAccess(true);
@@ -121,17 +124,19 @@ function ReputaAppContent() {
                 <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                   Reputa Score
                 </h1>
-                <p className="text-[10px] text-gray-400">Welcome, {userName}</p>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                   {isPiBrowser ? '● Live Testnet' : '○ Demo'}: {userName}
+                </p>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="hidden md:block text-right mr-4 border-l pl-4 border-purple-100">
+              {/* 3. إصلاح أيقونة الرفع: إضافة الـ label في الهيدر لضمان ظهورها في الجوال */}
+              <div className="flex items-center text-right mr-2 border-l pl-4 border-purple-100">
                 <label className="group flex flex-col cursor-pointer">
-                  <span className="text-[10px] font-black text-purple-600 group-hover:text-blue-600 transition-colors">
-                    BOOST SCORE (IMAGE) ↑
+                  <span className="text-[10px] font-black text-purple-600 group-hover:text-blue-600 transition-colors flex items-center gap-1">
+                    BOOST SCORE <span className="text-xs">↑</span>
                   </span>
-                  <span className="text-[8px] text-gray-400">Upload mining stats to verify seniority</span>
                   <input 
                     type="file" 
                     className="hidden" 
@@ -142,17 +147,18 @@ function ReputaAppContent() {
                       }
                     }}
                   />
+                  <span className="text-[8px] text-gray-400 italic">Upload Stats</span>
                 </label>
-                {miningDays > 0 && <span className="text-[9px] text-green-600 font-bold">✓ Seniority Verified!</span>}
+                {miningDays > 0 && <span className="ml-2 text-[14px] text-green-500 animate-bounce">✓</span>}
               </div>
 
               {hasProAccess && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-md">
-                  <span className="text-[10px] font-bold text-white">VIP Pro</span>
+                  <span className="text-[10px] font-black text-white uppercase italic">VIP PRO</span>
                 </div>
               )}
               {walletData && (
-                 <button onClick={() => setShowDashboard(true)} className="text-sm font-bold text-blue-600">
+                 <button onClick={() => setShowDashboard(true)} className="text-xs font-black text-blue-600 hover:text-blue-800 border-b-2 border-blue-600 pb-0.5 uppercase">
                     Dashboard
                  </button>
               )}
@@ -163,9 +169,9 @@ function ReputaAppContent() {
 
       <main className="container mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500 font-medium tracking-widest">Syncing Protocol...</p>
+          <div className="flex flex-col items-center justify-center py-20 text-blue-600">
+            <div className="w-12 h-12 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="font-black text-[10px] tracking-[0.2em] uppercase">Connecting to Pi Network...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -179,9 +185,11 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
-        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
-          © 2026 Reputa Analytics. Protocol Integrated.
+      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16 py-8">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-[0.3em]">
+            © 2026 Reputa Analytics • Certified Pi Network Protocol
+          </p>
         </div>
       </footer>
 
@@ -208,4 +216,3 @@ export default function App() {
     </TrustProvider>
   );
 }
-

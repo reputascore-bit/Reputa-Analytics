@@ -1,4 +1,4 @@
-/**
+/** 
  * Image Verification Module - Validate uploaded images
  */
 

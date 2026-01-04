@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
     <meta name="description" content="Reputa Score - Advanced Pi Network wallet reputation analyzer. Decode wallet behavior with AI-powered trust intelligence." />
     <meta name="keywords" content="Pi Network, wallet analyzer, trust score, blockchain reputation, crypto wallet" />
@@ -13,15 +13,24 @@
     <meta property="og:description" content="Discover what your Pi Network wallet reveals about trust, consistency, and reputation." />
     <meta property="og:image" content="/og-image.png" />
     
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Reputa Score v2.5" />
-    <meta name="twitter:description" content="Advanced Pi Network wallet reputation analyzer" />
-    
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-    <meta name="theme-color" content="#3b82f6" />
     
-    <title>Reputa Score v2.5 | Pi Network Wallet Analyzer</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js" defer></script>
+    
+    <meta name="theme-color" content="#7c3aed" /> <title>Reputa Score v2.5 | Pi Network Wallet Analyzer</title>
+
+    <style>
+      /* منع التمرير الأفقي لضمان استقرار واجهة Locofy */
+      body, html {
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #root {
+        min-height: 100vh;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

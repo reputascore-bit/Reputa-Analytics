@@ -1,4 +1,4 @@
-/**
+/**  
  * Staking Module - Analyze staking activity
  */
 

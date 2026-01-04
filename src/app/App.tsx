@@ -19,42 +19,54 @@ function ReputaAppContent() {
   const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState<string>('Guest');
+  const [isAuthorized, setIsAuthorized] = useState(false); // حالة جديدة للتأكد من الربط
 
   const { updateMiningDays, miningDays, trustScore } = useTrust();
   const isPiBrowser = typeof (window as any).Pi !== 'undefined';
 
-  // مصادقة المستخدم فور الدخول لربط الحساب
+  // 1. منطق الربط الصارم - يعمل مرة واحدة عند الفتح
   useEffect(() => {
     const startAuth = async () => {
       if (isPiBrowser) {
         try {
           await initializePi();
-          // طلب إذن الوصول لاسم المستخدم والمدفوعات
           const auth = await (window as any).Pi.authenticate(['username', 'payments'], 
-            (payment: any) => console.log("Payment status change", payment)
+            (payment: any) => console.log("Payment status", payment)
           );
           
           if (auth && auth.user) {
             setUserName(auth.user.username);
+            setIsAuthorized(true); // تم الربط بنجاح
             const vip = await isVIPUser(auth.user.uid);
             setHasProAccess(!!vip);
           }
         } catch (error) {
-          console.error("SDK Authentication Error:", error);
+          console.error("Auth Error:", error);
         }
       } else {
         setUserName("Demo User");
+        setIsAuthorized(true);
       }
     };
     startAuth();
   }, [isPiBrowser]);
 
+  // 2. إصلاح دالة الجلب لتنتظر الربط وتمنع خطأ التحميل
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
+    
+    // إذا لم يتم الربط بعد، نطلب من المستخدم الانتظار ثانية
+    if (!isAuthorized && isPiBrowser) {
+      alert("Please wait for Pi Account to link...");
+      return;
+    }
+
     setIsLoading(true);
     try {
       let realData;
       if (isPiBrowser) {
+        // ننتظر قليلاً لضمان استقرار الاتصال بالبلوكشين
+        await new Promise(resolve => setTimeout(resolve, 500));
         realData = await fetchWalletData(address);
       } else {
         realData = { balance: 100, scores: { totalScore: 650, miningScore: 75 }, trustLevel: 'Medium' };
@@ -67,7 +79,8 @@ function ReputaAppContent() {
       });
       setCurrentWalletAddress(address);
     } catch (error) {
-      alert("Testnet Sync Error. Please check the wallet address.");
+      console.error("Fetch Error:", error);
+      alert("Blockchain Error: Connection timeout. Try again.");
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +101,7 @@ function ReputaAppContent() {
           alert("Success! VIP Unlocked.");
         }
       } catch (err) {
-        alert("Payment process failed.");
+        alert("Payment cancelled.");
       }
     } else {
       setHasProAccess(true);

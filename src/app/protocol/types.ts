@@ -3,7 +3,7 @@
  * Core interfaces for the reputation system
  */
 
-export interface Transaction {
+export interface Transaction { 
   id: string;
   timestamp: Date;
   amount: number;

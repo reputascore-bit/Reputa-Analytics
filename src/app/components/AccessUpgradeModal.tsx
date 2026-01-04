@@ -1,4 +1,4 @@
-import { X, Sparkles, Lock, Check } from 'lucide-react'; 
+import { X, Sparkles, Lock, Check } from 'lucide-react';  
 import { Button } from './ui/button';
 import {
   Dialog,

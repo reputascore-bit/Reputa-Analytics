@@ -3,7 +3,7 @@
  * الربط الحقيقي مع شبكة الاختبار وتفعيل المصادقة الفعلية
  */
 
-import type { PiUser } from '../protocol/types';
+import type { PiUser } from '../protocol/types'; 
 
 // التحقق مما إذا كان التطبيق يعمل داخل متصفح Pi
 export function isPiBrowser(): boolean {

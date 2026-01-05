@@ -1,216 +1,262 @@
-
-/** 
- * Pi Payments Service
- * نظام المدفوعات الحقيقي المرتبط بـ Pi API Key
+/**
+ * Pi Payment Module - Fixed Payment Flow
+ * حل مشكلة Payment Expired
  */
 
-import { createPayment, getCurrentUser } from './piSdk';
-import type { PaymentData } from '../protocol/types';
+import type { PaymentData } from './types';
+
+declare global {
+  interface Window {
+    Pi?: any;
+  }
+}
+
+export function isPiAvailable(): boolean {
+  return typeof window !== 'undefined' && 'Pi' in window;
+}
 
 /**
- * إنشاء دفع اشتراك VIP (1 Pi)
- * سيقوم هذا بفتح نافذة الدفع في متصفح Pi للمستخدم
+ * Initialize Pi SDK with proper timeout handling
  */
-export async function createVIPSubscription(): Promise<PaymentData> {
+export async function initializePi(): Promise<void> {
+  if (!isPiAvailable()) {
+    console.warn('[PI PAYMENT] Pi SDK not available');
+    return;
+  }
+  
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error('User must be authenticated to upgrade');
-    }
-
-    const amount = 1; 
-    const memo = 'Reputa Score VIP Subscription - Full Analytics Access';
-    const metadata = {
-      type: 'vip_subscription',
-      userId: user.uid,
-      tier: 'premium'
-    };
-
-    // استدعاء الـ SDK لفتح المعاملة
-    // ملاحظة: الـ SDK سيطلب Approval من السيرفر الخاص بك تلقائياً عبر المسارات المعرفة
-    const paymentId = await createPayment(amount, memo, metadata);
-
-    const paymentData: PaymentData = {
-      paymentId,
-      amount,
-      memo,
-      userId: user.uid,
-      status: 'pending',
-      createdAt: new Date()
-    };
-
-    storePayment(paymentData);
-    return paymentData;
+    await window.Pi!.init({ version: '2.0', sandbox: true });
+    console.log('[PI PAYMENT] SDK initialized successfully');
   } catch (error) {
-    console.error('[PAYMENT] VIP subscription failed:', error);
+    console.error('[PI PAYMENT] Init failed:', error);
     throw error;
   }
 }
 
 /**
- * الموافقة على الدفع (Approve)
- * يتم استدعاؤها لإعلام السيرفر بأن التطبيق موافق على استلام الـ Pi
+ * Authenticate user with extended timeout
  */
-export async function approvePayment(
-  paymentId: string,
-  userId: string,
-  amount: number
-): Promise<boolean> {
+export async function authenticate(): Promise<{ uid: string; username: string }> {
+  if (!isPiAvailable()) {
+    throw new Error('Pi SDK not available');
+  }
+  
   try {
-    // إرسال الطلب للسيرفر الذي يستخدم VITE_PI_API_KEY للمصادقة مع Pi Server
-    const response = await fetch('/api/approve', {
+    const scopes = ['username', 'payments'];
+    const auth = await window.Pi!.authenticate(scopes, onIncompletePayment);
+    
+    return {
+      uid: auth.user.uid,
+      username: auth.user.username
+    };
+  } catch (error) {
+    console.error('[PI PAYMENT] Auth failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create VIP payment with proper callback sequence
+ * الحل الرئيسي لمشكلة Payment Expired
+ */
+export async function createVIPPayment(userId: string): Promise<boolean> {
+  if (!isPiAvailable()) {
+    throw new Error('Pi SDK not available. Please use Pi Browser.');
+  }
+  
+  try {
+    let paymentApproved = false;
+    
+    // إنشاء الدفع مع معالجة صحيحة للـ callbacks
+    const payment = await window.Pi!.createPayment({
+      amount: 1,
+      memo: 'Reputa Score VIP Subscription',
+      metadata: { 
+        type: 'vip_subscription', 
+        userId,
+        timestamp: Date.now()
+      }
+    }, {
+      // Callback 1: عندما يصبح الدفع جاهزاً للموافقة من السيرفر
+      onReadyForServerApproval: async (paymentId: string) => {
+        console.log('[PI PAYMENT] Ready for approval:', paymentId);
+        
+        try {
+          // إرسال طلب الموافقة للسيرفر فوراً
+          const response = await fetch('/api/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, userId, amount: 1 })
+          });
+          
+          const data = await response.json();
+          
+          if (data.approved) {
+            paymentApproved = true;
+            console.log('[PI PAYMENT] Server approved payment');
+          } else {
+            throw new Error('Server approval failed');
+          }
+        } catch (error) {
+          console.error('[PI PAYMENT] Approval error:', error);
+          throw error;
+        }
+      },
+      
+      // Callback 2: عندما يكتمل الدفع على البلوكشين
+      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+        console.log('[PI PAYMENT] Ready for completion:', paymentId, txid);
+        
+        try {
+          // إرسال طلب الإكمال للسيرفر
+          const response = await fetch('/api/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid, userId, amount: 1 })
+          });
+          
+          const data = await response.json();
+          
+          if (data.completed) {
+            // تفعيل VIP محلياً
+            activateVIP(userId);
+            console.log('[PI PAYMENT] Payment completed successfully');
+          }
+        } catch (error) {
+          console.error('[PI PAYMENT] Completion error:', error);
+        }
+      },
+      
+      // Callback 3: إلغاء الدفع
+      onCancel: (paymentId: string) => {
+        console.log('[PI PAYMENT] Payment cancelled by user:', paymentId);
+      },
+      
+      // Callback 4: حدوث خطأ
+      onError: (error: Error, paymentId?: string) => {
+        console.error('[PI PAYMENT] Payment error:', error, paymentId);
+      }
+    });
+    
+    console.log('[PI PAYMENT] Payment created:', payment.identifier);
+    return paymentApproved;
+    
+  } catch (error) {
+    console.error('[PI PAYMENT] Create payment failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * معالجة المدفوعات غير المكتملة
+ */
+function onIncompletePayment(payment: any): void {
+  console.log('[PI PAYMENT] Incomplete payment found:', payment);
+  
+  // محاولة إكمال الدفع تلقائياً
+  if (payment.status === 'pending_approval') {
+    fetch('/api/approve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, userId, amount })
-    });
+      body: JSON.stringify({
+        paymentId: payment.identifier,
+        userId: payment.metadata?.userId,
+        amount: payment.amount
+      })
+    }).catch(console.error);
+  }
+}
 
-    if (!response.ok) throw new Error('Backend approval failed');
+/**
+ * تفعيل VIP محلياً
+ */
+function activateVIP(userId: string): void {
+  const vipData = {
+    active: true,
+    userId,
+    activatedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+  };
+  
+  localStorage.setItem(`vip_${userId}`, JSON.stringify(vipData));
+  
+  // إطلاق حدث لتحديث الواجهة
+  window.dispatchEvent(new CustomEvent('vip-activated', { detail: vipData }));
+}
 
-    const data = await response.json();
-    if (data.approved) {
-      updatePaymentStatus(paymentId, 'approved');
-      console.log('[PAYMENT] Server Approved:', paymentId);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('[PAYMENT] Approval failed:', error);
+/**
+ * التحقق من حالة VIP
+ */
+export function checkVIPStatus(userId: string): boolean {
+  try {
+    const vipData = localStorage.getItem(`vip_${userId}`);
+    if (!vipData) return false;
+    
+    const { active, expiresAt } = JSON.parse(vipData);
+    return active && new Date(expiresAt) > new Date();
+  } catch {
     return false;
   }
 }
 
 /**
- * إتمام الدفع (Complete)
- * يتم استدعاؤها بعد أن يؤكد البلوكشين نجاح التحويل
+ * إرسال Pi يدوياً إلى محفظة أخرى
+ * الميزة الجديدة المطلوبة
  */
-export async function completePayment(
-  paymentId: string,
-  txid: string,
-  userId: string,
-  amount: number
-): Promise<boolean> {
-  try {
-    const response = await fetch('/api/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, txid, userId, amount })
-    });
-
-    if (!response.ok) throw new Error('Backend completion failed');
-
-    const data = await response.json();
-    if (data.completed) {
-      updatePaymentStatus(paymentId, 'completed', txid);
-      
-      // تفعيل حالة الـ VIP محلياً فوراً
-      updateVIPStatus(userId, true);
-      
-      console.log('[PAYMENT] Transaction Finalized:', txid);
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('[PAYMENT] Completion failed:', error);
-    return false;
-  }
-}
-
-/**
- * إرسال Pi (لأغراض المكافآت أو التحويلات اليدوية)
- */
-export async function sendPi(
-  recipientId: string,
+export async function sendPiManually(
+  recipientAddress: string,
   amount: number,
   memo: string = ''
-): Promise<PaymentData> {
+): Promise<{ success: boolean; txid?: string }> {
+  if (!isPiAvailable()) {
+    throw new Error('Pi SDK required for sending Pi');
+  }
+  
   try {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Authentication required');
-
-    const metadata = { type: 'p2p_transfer', recipientId, senderId: user.uid };
-    const paymentId = await createPayment(amount, memo || `Transfer to ${recipientId}`, metadata);
-
-    const paymentData: PaymentData = {
-      paymentId, amount, memo, userId: user.uid,
-      status: 'pending', createdAt: new Date()
-    };
-
-    storePayment(paymentData);
-    return paymentData;
+    const user = await authenticate();
+    
+    const payment = await window.Pi!.createPayment({
+      amount,
+      memo: memo || `Transfer from Reputa Score`,
+      metadata: { 
+        type: 'p2p_transfer',
+        senderId: user.uid,
+        recipientAddress,
+        timestamp: Date.now()
+      }
+    }, {
+      onReadyForServerApproval: async (paymentId: string) => {
+        console.log('[SEND PI] Approval:', paymentId);
+      },
+      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+        console.log('[SEND PI] Completed:', txid);
+        return { success: true, txid };
+      },
+      onCancel: () => {
+        console.log('[SEND PI] Cancelled');
+      },
+      onError: (error: Error) => {
+        console.error('[SEND PI] Error:', error);
+      }
+    });
+    
+    return { success: true, txid: payment.identifier };
+    
   } catch (error) {
-    console.error('[PAYMENT] Send Pi failed:', error);
-    throw error;
+    console.error('[SEND PI] Failed:', error);
+    return { success: false };
   }
 }
 
 /**
- * وظائف المساعدة لتخزين البيانات محلياً (Helpers)
+ * فتح محفظة Pi
  */
-export function getPaymentStatus(paymentId: string): PaymentData | null {
-  const stored = localStorage.getItem(`payment_${paymentId}`);
-  if (!stored) return null;
-  try {
-    const payment = JSON.parse(stored);
-    return {
-      ...payment,
-      createdAt: new Date(payment.createdAt),
-      completedAt: payment.completedAt ? new Date(payment.completedAt) : undefined
-    };
-  } catch { return null; }
-}
-
-export function getAllPayments(userId: string): PaymentData[] {
-  const payments: PaymentData[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('payment_')) {
-      const p = JSON.parse(localStorage.getItem(key) || '{}');
-      if (p.userId === userId) {
-        payments.push({ ...p, createdAt: new Date(p.createdAt) });
-      }
+export async function openPiWallet(): Promise<void> {
+  if (isPiAvailable()) {
+    try {
+      await window.Pi!.openWallet();
+    } catch (error) {
+      console.error('[PI WALLET] Open failed:', error);
     }
   }
-  return payments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
-
-function storePayment(payment: PaymentData): void {
-  localStorage.setItem(`payment_${payment.paymentId}`, JSON.stringify(payment));
-}
-
-function updatePaymentStatus(paymentId: string, status: PaymentData['status'], txid?: string): void {
-  const payment = getPaymentStatus(paymentId);
-  if (!payment) return;
-  payment.status = status;
-  if (txid) payment.txid = txid;
-  if (status === 'completed') payment.completedAt = new Date();
-  storePayment(payment);
-}
-
-/**
- * التحقق من صلاحية VIP
- */
-export function isVIPUser(userId: string): boolean {
-  const vipStatus = localStorage.getItem(`vip_${userId}`);
-  if (!vipStatus) return false;
-  try {
-    const data = JSON.parse(vipStatus);
-    return new Date(data.expiresAt) > new Date();
-  } catch { return false; }
-}
-
-function updateVIPStatus(userId: string, isVIP: boolean): void {
-  if (isVIP) {
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1); // اشتراك لمدة سنة
-    localStorage.setItem(`vip_${userId}`, JSON.stringify({
-      userId, isVIP: true, activatedAt: new Date(), expiresAt
-    }));
-  } else {
-    localStorage.removeItem(`vip_${userId}`);
-  }
-}
-
-export function getVIPExpiration(userId: string): Date | null {
-  const vipStatus = localStorage.getItem(`vip_${userId}`);
-  return vipStatus ? new Date(JSON.parse(vipStatus).expiresAt) : null;
-}. 

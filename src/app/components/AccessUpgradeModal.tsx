@@ -13,6 +13,12 @@ interface AccessUpgradeModalProps {
   onClose: () => void;
   onUpgrade: () => void;
 }
+<AccessUpgradeModal
+  isOpen={isOpen}
+  onClose={onClose}
+  onUpgrade={onUpgrade}
+  onSendPi={handleSendPi}  // ← جديد
+/>
 
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgradeModalProps) {
   return (

@@ -1,3 +1,4 @@
+
 /** 
  * Pi Payments Service
  * نظام المدفوعات الحقيقي المرتبط بـ Pi API Key
@@ -212,4 +213,4 @@ function updateVIPStatus(userId: string, isVIP: boolean): void {
 export function getVIPExpiration(userId: string): Date | null {
   const vipStatus = localStorage.getItem(`vip_${userId}`);
   return vipStatus ? new Date(JSON.parse(vipStatus).expiresAt) : null;
-}
+}. 

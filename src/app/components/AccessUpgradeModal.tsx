@@ -12,7 +12,7 @@ interface AccessUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade: () => void;
-
+}
 
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgradeModalProps) {
   return (
@@ -138,4 +138,3 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
     </Dialog>
   );
 }
-

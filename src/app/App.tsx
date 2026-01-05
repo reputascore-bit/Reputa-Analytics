@@ -18,18 +18,16 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // ✅ تعديل الجزء المطلوب: دالة التزامن الموحدة لمنع التضارب
+  // ✅ دالة التزامن الموحدة لمنع التضارب
   const syncUser = useCallback(async () => {
     if (!piBrowserActive) return null;
     
     try {
       await initializePiSDK();
-      // طلب المصادقة مرة واحدة فقط بصلاحيات كاملة
       const user = await authenticateUser(['username', 'payments']);
       
       if (user) {
         setCurrentUser(user);
-        // التحقق من حالة الـ VIP فوراً عند تسجيل الدخول
         const vip = checkVIPStatus(user.uid);
         setHasProAccess(vip);
         return user;
@@ -71,34 +69,42 @@ function ReputaAppContent() {
     }
   };
 
+  // ✅ الجزء المعدل: معالج VIP محسن يمنع فشل التهيئة
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
       alert('Please use Pi Browser');
       return;
     }
+
     try {
-      // استخدام المستخدم الحالي أو إعادة المزامنة سريعاً
-      const user = currentUser || await syncUser();
+      // تجديد المصادقة فوراً قبل طلب الدفع لضمان وجود توكن نشط
+      const user = await syncUser(); 
       const userId = user?.uid;
       
       if (!userId) {
-        alert("Authentication required. Please refresh.");
+        alert("Authentication required. Please refresh the page.");
         return;
       }
 
+      // بدء عملية الدفع
       await createVIPPayment(userId);
       
-      // فحص الحالة بعد وقت قصير من محاولة الدفع
-      setTimeout(() => {
+      // مراقبة حالة التفعيل لمدة دقيقتين
+      const checkInterval = setInterval(() => {
         const vip = checkVIPStatus(userId);
         if (vip) {
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
+          clearInterval(checkInterval);
         }
-      }, 5000);
+      }, 3000);
+
+      // تنظيف المؤقت تلقائياً
+      setTimeout(() => clearInterval(checkInterval), 120000);
+
     } catch (error) {
-      console.error("Payment Error:", error);
-      alert('Payment initialization failed. Please try again.');
+      console.error("Payment Flow Error:", error);
+      alert('Payment initialization failed. Please ensure your wallet is ready and try again.');
     }
   };
 

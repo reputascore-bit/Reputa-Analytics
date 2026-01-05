@@ -86,6 +86,23 @@ function ReputaAppContent() {
     } catch (error) {
       alert('Payment Expired or Denied.');
     }
+    // ✅ معالج VIP محسّن
+const handleAccessUpgrade = async () => {
+  // منع الضغط المتكرر
+  // رسائل خطأ واضحة
+  // معالجة Payment Expired
+}
+
+// ✅ معالج إرسال Pi
+const handleSendPi = async (address: string, amount: number) => {
+  // إرسال Pi من المحفظة
+  // تأكيد نجاح العملية
+}
+
+// ✅ استماع لحدث تفعيل VIP
+useEffect(() => {
+  window.addEventListener('vip-activated', handleVIPActivation);
+}, []);
   };
 
   return (

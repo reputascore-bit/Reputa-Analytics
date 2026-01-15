@@ -1,28 +1,30 @@
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useMemo } from 'react'; 
 import { Analytics } from '@vercel/analytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
-import { checkVIPStatus, createVIPPayment } from './protocol/piPayment';
+import { createVIPPayment, checkVIPStatus } from './protocol/piPayment';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
 
 function ReputaAppContent() {
+  // 1. حالات التطبيق (States)
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasProAccess, setHasProAccess] = useState(false);
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'demo'>('loading');
 
-  const piBrowserActive = isPiBrowser();
+  const isPi = useMemo(() => isPiBrowser(), []);
   const { refreshWallet } = useTrust();
 
-  // ✅ 1. تسجيل الدخول لمرة واحدة فقط عند بداية تشغيل التطبيق
+  // 2. منطق تسجيل الدخول (مرة واحدة فقط عند التشغيل)
   useEffect(() => {
-    const initApp = async () => {
-      if (piBrowserActive) {
+    const initSession = async () => {
+      if (isPi) {
         try {
           await initializePiSDK();
           const user = await authenticateUser(['username', 'payments']);
@@ -30,90 +32,115 @@ function ReputaAppContent() {
             setCurrentUser(user);
             const isVIP = await checkVIPStatus(user.uid);
             setHasProAccess(isVIP);
+            setAuthStatus('authenticated');
           }
-        } catch (e) { console.error("Pi Auth Failed", e); }
+        } catch (e) {
+          console.error("Auth failed, switching to demo", e);
+          setAuthStatus('demo');
+        }
       } else {
         // وضع الديمو للمتصفح العادي
-        setCurrentUser({ username: "Demo_User", uid: "demo_123" });
-        setHasProAccess(true); 
+        setCurrentUser({ username: "Guest_User", uid: "demo_id" });
+        setHasProAccess(true); // فتح الصلاحيات تلقائياً في الديمو
+        setAuthStatus('demo');
       }
     };
-    initApp();
-  }, [piBrowserActive]);
+    initSession();
+  }, [isPi]);
 
+  // 3. منطق فحص المحفظة (سلس ومباشر)
   const handleWalletCheck = async (address: string) => {
-    if (!address) return;
+    if (!address || isLoading) return;
     setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
-      setWalletData({ ...data, reputaScore: 850, trustLevel: 'Elite' });
+      setWalletData({
+        ...data,
+        reputaScore: 850, // بيانات عرض ثابتة للمنطق
+        trustLevel: 'Elite'
+      });
     } catch (error) {
-      alert('Sync Error');
-    } finally { setIsLoading(false); }
+      alert("Address sync error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleAccessUpgrade = async () => {
-    if (!piBrowserActive) { setHasProAccess(true); setIsUpgradeModalOpen(false); return; }
+  // 4. منطق الدفع (يستدعى فقط عند الحاجة)
+  const handlePaymentRequest = async () => {
+    if (authStatus === 'demo') {
+      setHasProAccess(true);
+      setIsUpgradeModalOpen(false);
+      return;
+    }
+
     try {
       if (currentUser?.uid) {
         const success = await createVIPPayment(currentUser.uid);
-        if (success) { setHasProAccess(true); setIsUpgradeModalOpen(false); }
+        if (success) {
+          setHasProAccess(true);
+          setIsUpgradeModalOpen(false);
+        }
       }
-    } catch (e) { alert("Payment Error"); }
+    } catch (e) {
+      alert("Payment was not completed.");
+    }
   };
 
+  // 5. واجهة مستخدم نظيفة (UI) بدون تكرار
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white sticky top-0 z-50">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img src={logoImage} alt="logo" className="w-8 h-8" />
-            <div>
-              <h1 className="font-bold text-purple-700">Reputa Score</h1>
-              {/* عرض اسم المستخدم المسجل لمرة واحدة فقط هنا */}
-              <p className="text-[10px] text-gray-500 font-mono">
-                {currentUser ? `👤 ${currentUser.username}` : 'Connecting...'}
-              </p>
-            </div>
-          </div>
-          
-          {/* ✅ تم إزالة جميع الأزرار من هنا (الـ Header) لمنع التكرار مع المكونات الأصلية */}
-          <div className="flex gap-2">
-             {hasProAccess && (
-               <span className="text-[10px] font-bold text-yellow-500">VIP ACTIVE</span>
-             )}
+    <div className="min-h-screen bg-white flex flex-col font-sans">
+      {/* هيدر بسيط يعرض الهوية فقط */}
+      <header className="border-b p-4 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <img src={logoImage} alt="logo" className="w-9 h-9" />
+          <div>
+            <h1 className="font-extrabold text-purple-800 leading-none">Reputa</h1>
+            <span className="text-[10px] text-gray-400 font-mono">
+              {authStatus === 'loading' ? 'Connecting...' : `👤 ${currentUser?.username}`}
+            </span>
           </div>
         </div>
+        
+        {/* إشارة VIP صغيرة وغير مزعجة */}
+        {hasProAccess && (
+          <div className="bg-yellow-100 text-yellow-700 text-[9px] font-black px-2 py-0.5 rounded border border-yellow-200 uppercase">
+            VIP Active
+          </div>
+        )}
       </header>
 
-      <main className="container mx-auto px-4 py-8 flex-1">
-        {!walletData ? (
+      <main className="flex-1 container mx-auto px-4 py-6">
+        {authStatus === 'loading' ? (
+          <div className="h-64 flex items-center justify-center text-purple-600 animate-pulse">
+            Initializing Secure Session...
+          </div>
+        ) : !walletData ? (
           <WalletChecker 
             onCheck={handleWalletCheck} 
-            // نمرر المستخدم الحالي للمكون الداخلي لكي لا يطلب التسجيل مرة ثانية
-            currentUser={currentUser} 
+            isDemo={authStatus === 'demo'} 
           />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={hasProAccess} 
+            isProUser={hasProAccess}
             onReset={() => setWalletData(null)}
-            // نستخدم المودال الموجود في App.tsx عند ضغط زر VIP الداخلي
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      <footer className="p-3 text-center text-[9px] text-gray-400 border-t bg-gray-50">
-        LOGGED IN AS: {currentUser?.username || 'GUEST'}
+      <footer className="p-4 text-[9px] text-center text-gray-400 bg-gray-50 uppercase tracking-tighter">
+        Status: {authStatus} | {isPi ? 'Pi Browser' : 'Web View'}
       </footer>
 
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={handleAccessUpgrade}
+        onUpgrade={handlePaymentRequest}
       />
+      
       <Analytics />
     </div>
   );

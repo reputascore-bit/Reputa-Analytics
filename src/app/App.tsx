@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'; 
+import { useState, useEffect } from 'react'; 
 import { Analytics } from '@vercel/analytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
@@ -10,66 +10,69 @@ import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk
 import logoImage from '../assets/logo.svg';
 
 function ReputaAppContent() {
-  // 1. حالات التطبيق (States)
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasProAccess, setHasProAccess] = useState(false);
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'demo'>('loading');
+  // إضافة حالة للتحكم في الديمو حتى داخل متصفح باي
+  const [isDemoActive, setIsDemoActive] = useState(false); 
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const isPi = useMemo(() => isPiBrowser(), []);
+  const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // 2. منطق تسجيل الدخول (مرة واحدة فقط عند التشغيل)
   useEffect(() => {
-    const initSession = async () => {
-      if (isPi) {
-        try {
-          await initializePiSDK();
-          const user = await authenticateUser(['username', 'payments']);
-          if (user) {
-            setCurrentUser(user);
-            const isVIP = await checkVIPStatus(user.uid);
-            setHasProAccess(isVIP);
-            setAuthStatus('authenticated');
-          }
-        } catch (e) {
-          console.error("Auth failed, switching to demo", e);
-          setAuthStatus('demo');
+    const initApp = async () => {
+      // إذا لم يكن متصفح باي، نفعل الديمو فوراً وننهي التحميل
+      if (!piBrowser) {
+        setCurrentUser({ username: "Guest_User", uid: "demo_mode" });
+        setHasProAccess(true);
+        setIsDemoActive(true);
+        setIsInitializing(false);
+        return;
+      }
+
+      // إذا كان متصفح باي، نحاول تسجيل الدخول
+      try {
+        await initializePiSDK();
+        const user = await authenticateUser(['username', 'payments']);
+        if (user) {
+          setCurrentUser(user);
+          const isVIP = await checkVIPStatus(user.uid);
+          setHasProAccess(isVIP);
         }
-      } else {
-        // وضع الديمو للمتصفح العادي
-        setCurrentUser({ username: "Guest_User", uid: "demo_id" });
-        setHasProAccess(true); // فتح الصلاحيات تلقائياً في الديمو
-        setAuthStatus('demo');
+      } catch (e) {
+        console.error("Pi connection failed, using demo fallback");
+        setIsDemoActive(true);
+      } finally {
+        setIsInitializing(false); // إنهاء حالة التحميل في كل الحالات
       }
     };
-    initSession();
-  }, [isPi]);
+    initApp();
+  }, [piBrowser]);
 
-  // 3. منطق فحص المحفظة (سلس ومباشر)
   const handleWalletCheck = async (address: string) => {
-    if (!address || isLoading) return;
+    if (!address) return;
     setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
       setWalletData({
         ...data,
-        reputaScore: 850, // بيانات عرض ثابتة للمنطق
+        reputaScore: 850,
         trustLevel: 'Elite'
       });
     } catch (error) {
-      alert("Address sync error. Please try again.");
+      alert('Sync Error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 4. منطق الدفع (يستدعى فقط عند الحاجة)
-  const handlePaymentRequest = async () => {
-    if (authStatus === 'demo') {
+  const handlePayment = async () => {
+    // إذا ضغط المستخدم دفع وهو في الديمو (خارج باي) نفتح له المزايا فوراً
+    if (!piBrowser) {
       setHasProAccess(true);
       setIsUpgradeModalOpen(false);
       return;
@@ -80,67 +83,74 @@ function ReputaAppContent() {
         const success = await createVIPPayment(currentUser.uid);
         if (success) {
           setHasProAccess(true);
+          setIsDemoActive(false); // تحول من ديمو إلى حقيقي
           setIsUpgradeModalOpen(false);
         }
       }
     } catch (e) {
-      alert("Payment was not completed.");
+      alert("Payment interrupted");
     }
   };
 
-  // 5. واجهة مستخدم نظيفة (UI) بدون تكرار
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white text-purple-700 font-bold">
+        <div className="animate-pulse text-center">
+          <p>Initializing Session...</p>
+          <p className="text-[10px] text-gray-400 font-normal mt-2">Connecting to Network</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      {/* هيدر بسيط يعرض الهوية فقط */}
-      <header className="border-b p-4 flex justify-between items-center bg-white/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <img src={logoImage} alt="logo" className="w-9 h-9" />
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div>
-            <h1 className="font-extrabold text-purple-800 leading-none">Reputa</h1>
-            <span className="text-[10px] text-gray-400 font-mono">
-              {authStatus === 'loading' ? 'Connecting...' : `👤 ${currentUser?.username}`}
-            </span>
+            <h1 className="font-bold text-purple-700">Reputa Score</h1>
+            <p className="text-[10px] text-gray-400">
+              👤 {currentUser?.username || 'Guest'} 
+              {isDemoActive && <span className="ml-1 text-blue-500 font-bold">(DEMO)</span>}
+            </p>
           </div>
         </div>
         
-        {/* إشارة VIP صغيرة وغير مزعجة */}
-        {hasProAccess && (
-          <div className="bg-yellow-100 text-yellow-700 text-[9px] font-black px-2 py-0.5 rounded border border-yellow-200 uppercase">
-            VIP Active
-          </div>
+        {/* زر التبديل للديمو متاح دائماً للتجربة */}
+        {!hasProAccess && !isDemoActive && (
+          <button 
+            onClick={() => setIsDemoActive(true)}
+            className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-200"
+          >
+            Preview VIP
+          </button>
         )}
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-6">
-        {authStatus === 'loading' ? (
-          <div className="h-64 flex items-center justify-center text-purple-600 animate-pulse">
-            Initializing Secure Session...
-          </div>
-        ) : !walletData ? (
-          <WalletChecker 
-            onCheck={handleWalletCheck} 
-            isDemo={authStatus === 'demo'} 
-          />
+      <main className="container mx-auto px-4 py-8 flex-1">
+        {!walletData ? (
+          <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={hasProAccess}
+            // التعديل الجوهري: التقرير يفتح إذا كان VIP حقيقي أو إذا كان الديمو مفعلاً
+            isProUser={hasProAccess || isDemoActive} 
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      <footer className="p-4 text-[9px] text-center text-gray-400 bg-gray-50 uppercase tracking-tighter">
-        Status: {authStatus} | {isPi ? 'Pi Browser' : 'Web View'}
+      <footer className="p-4 text-center text-[9px] text-gray-400 border-t bg-gray-50 uppercase">
+        Mode: {isDemoActive ? 'Demo Preview' : 'Official Network'}
       </footer>
 
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={handlePaymentRequest}
+        onUpgrade={handlePayment}
       />
-      
       <Analytics />
     </div>
   );

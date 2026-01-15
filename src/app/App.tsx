@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'; 
+import { useState, useEffect } from 'react'; 
+import { Analytics } from '@vercel/analytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -13,29 +14,34 @@ function ReputaAppContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  
-  // ✅ التغيير الجذري: تحديد حالة الـ VIP بناءً على المتصفح مباشرة
+  const [hasProAccess, setHasProAccess] = useState(false); // الحالة الافتراضية مغلق
+
   const piBrowserActive = isPiBrowser();
-  const [hasProAccess, setHasProAccess] = useState(!piBrowserActive); // true فوراً إذا لم يكن متصفح باي
+  const { refreshWallet } = useTrust();
 
-  const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
-
-  // تحديث البيانات عند فتح التطبيق
   useEffect(() => {
     const initApp = async () => {
+      // تحميل اسم المستخدم المخزن سابقاً إن وجد
+      const savedUser = localStorage.getItem('reputa_user');
+      if (savedUser) setCurrentUser(JSON.parse(savedUser));
+
       if (piBrowserActive) {
         try {
           await initializePiSDK();
           const user = await authenticateUser(['username', 'payments']);
           if (user) {
             setCurrentUser(user);
-            setHasProAccess(checkVIPStatus(user.uid));
+            localStorage.setItem('reputa_user', JSON.stringify(user)); // حفظ المستخدم
+            const isVIP = await checkVIPStatus(user.uid);
+            setHasProAccess(isVIP);
           }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Pi SDK Error", e); }
       } else {
-        // وضع الديمو الإجباري
-        setCurrentUser({ username: "Demo_User", uid: "demo123" });
-        setHasProAccess(true);
+        // في المتصفح العادي: نترك المستخدم يرى الديمو ولكن زر الـ VIP متاح للتجربة
+        if (!savedUser) {
+          const demoUser = { username: "Guest_User", uid: "demo123" };
+          setCurrentUser(demoUser);
+        }
       }
     };
     initApp();
@@ -48,13 +54,11 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
       
-      // حساب سكورد تجريبي مرتفع للديمو
-      const score = 850; 
-
+      // بيانات تجريبية
       setWalletData({
         ...data,
-        reputaScore: score,
-        trustScore: score / 10,
+        reputaScore: 850,
+        trustScore: 85,
         consistencyScore: 95,
         networkTrust: 88,
         trustLevel: 'Elite'
@@ -68,57 +72,71 @@ function ReputaAppContent() {
 
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
+      // محاكاة دفع في المتصفح العادي
+      alert("Demo: Payment Simulated Successfully!");
       setHasProAccess(true);
       setIsUpgradeModalOpen(false);
       return;
     }
-    // منطق الدفع الحقيقي في متصفح باي
+    
     try {
-      if (currentUser?.uid) await createVIPPayment(currentUser.uid);
-    } catch (e) { alert("Payment Error"); }
+      if (currentUser?.uid) {
+        await createVIPPayment(currentUser.uid);
+        setHasProAccess(true); // تفعيل بعد الدفع
+        setIsUpgradeModalOpen(false);
+      }
+    } catch (e) { 
+      alert("Payment failed or cancelled"); 
+    }
   };
 
   return (
-    <div className="min-h-screen bg-white overflow-x-hidden flex flex-col">
-      <header className="border-b p-4 bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="border-b p-4 bg-white sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
             <img src={logoImage} alt="logo" className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-purple-700">Reputa Score</h1>
-              <p className="text-[10px] text-gray-500 uppercase">
-                {piBrowserActive ? '● Live Network' : 'PRO DEMO MODE'}
+              {/* عرض اسم المستخدم هنا ليبقى ظاهراً */}
+              <p className="text-[10px] text-gray-500 font-mono">
+                {currentUser ? `Hi, ${currentUser.username}` : 'Initializing...'}
               </p>
             </div>
           </div>
           
-          <div className="flex gap-2">
-            {hasProAccess && (
-              <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded animate-bounce">
-                VIP UNLOCKED
+          <div className="flex items-center gap-2">
+            {hasProAccess ? (
+              <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded shadow-sm">
+                👑 VIP MEMBER
               </span>
+            ) : (
+              <button 
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="bg-purple-600 text-white text-[10px] px-3 py-1 rounded-full animate-pulse"
+              >
+                UPGRADE TO VIP
+              </button>
             )}
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
-        {isLoading ? (
-          <div className="text-center py-20">Loading VIP Analysis...</div>
-        ) : !walletData ? (
+        {!walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={true} // فرضه كـ VIP دائماً في هذا الكود للتجربة
+            isProUser={hasProAccess} // سيتغير المحتوى بناءً على الدفع
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      <footer className="p-4 text-center text-[10px] text-gray-400 border-t">
-        DEMO MODE v2.1 - ALL FEATURES UNLOCKED
+      <footer className="p-4 text-center text-[9px] text-gray-400 border-t bg-gray-50">
+        Logged in as: {currentUser?.username || 'Guest'} | ID: {currentUser?.uid?.substring(0,8)}...
       </footer>
 
       <AccessUpgradeModal
@@ -126,6 +144,7 @@ function ReputaAppContent() {
         onClose={() => setIsUpgradeModalOpen(false)}
         onUpgrade={handleAccessUpgrade}
       />
+      <Analytics />
     </div>
   );
 }

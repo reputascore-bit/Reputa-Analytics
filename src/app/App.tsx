@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'; 
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercelanalytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -19,7 +19,6 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // 1. تهيئة النظام: دخول صامت وسريع
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
@@ -40,22 +39,23 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  // 2. معالجة المحفظة: التعديل لجلب السكور الحقيقي بدلاً من 314
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
       if (data) {
+        // ✅ الإصلاح الجذري: نلغي الرقم 314 ونلغي كلمة Elite الثابتة
         setWalletData({
           ...data,
-          // ✅ تم التعديل: نأخذ السكور المحسوب من البروتوكول مباشرة
+          // يتم أخذ السكور وعدد المعاملات والعمر من ملف wallet.ts حصراً
           reputaScore: data.reputaScore, 
-          // ✅ تم التعديل: تحديد الحالة بناءً على قوة المحفظة الحقيقية
-          trustLevel: data.reputaScore > 600 ? 'Elite' : data.reputaScore > 300 ? 'Verified' : 'New Account'
+          totalTransactions: data.totalTransactions,
+          accountAge: data.accountAge,
+          // تغيير الحالة بناءً على السكور الفعلي ( Elite للأرقام العالية فقط)
+          trustLevel: data.reputaScore >= 600 ? 'Elite Wallet' : 'Verified User'
         });
         
-        // تحديث البروتوكول في الخلفية لعدم تعليق الواجهة
         setTimeout(() => refreshWallet(address).catch(() => null), 100);
       }
     } catch (error) {
@@ -65,7 +65,6 @@ function ReputaAppContent() {
     }
   };
 
-  // 3. أيقونة الربط: تصميم جذاب ومتوسط
   const handleManualLink = async () => {
     if (!piBrowser) return;
     try {
@@ -121,7 +120,7 @@ function ReputaAppContent() {
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={true} // الحفاظ على ميزة الديمو مفتوحة للجميع
+            isProUser={true} 
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />

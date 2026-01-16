@@ -7,7 +7,7 @@ import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
-import logoImage from '../assets/logo.svg';
+import logoImage from '../assets/logo.png';
 
 function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);

@@ -47,17 +47,16 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
     onCheck(cleanAddress);
   };
 
+  // ✅ التعديل الأخير لضمان عمل الديمو بانسجام مع ملف App.tsx المحدث
   const handleTryDemo = () => {
-    // عنوان تجريبي حقيقي الشكل للاختبار
-    const demoAddress = 'GDBA76X636J5U6P3TKYL7O6XF7X7X7X7X7X7X7X7X7X7X7X7X7X7X7X7';
-    setAddress(demoAddress);
     setError('');
-    onCheck(demoAddress);
+    // نرسل 'demo' لكي يفهم App.tsx أنه يجب عرض بيانات الديمو المصلحة (بدون NaN)
+    onCheck('demo');
   };
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Hero Section - الهيكل الأصلي تماماً */}
+      {/* Hero Section */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center justify-center mb-6 relative">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 blur-3xl rounded-full"></div>
@@ -83,7 +82,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
       <Card className="p-8 shadow-xl border-2">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="wallet-address" className="block mb-2 font-semibold">
+            <label htmlFor="wallet-address" className="block mb-2 font-semibold text-gray-700">
               Enter Wallet Address
             </label>
             <div className="relative">
@@ -91,9 +90,9 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
                 id="wallet-address"
                 type="text"
                 value={address}
-                onChange={(e) => setAddress(e.target.value.toUpperCase())} // تحويل تلقائي للأحرف الكبيرة لتسهيل الإدخال
+                onChange={(e) => setAddress(e.target.value.toUpperCase())}
                 placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                className="pr-12 h-14 text-lg font-mono uppercase"
+                className="pr-12 h-14 text-lg font-mono uppercase focus:ring-purple-500 border-gray-200"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <Search className="w-5 h-5 text-gray-400" />
@@ -107,7 +106,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           <div className="flex gap-3">
             <Button 
               type="submit" 
-              className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg active:scale-95"
+              className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg active:scale-95 text-white font-bold"
             >
               Analyze Wallet
             </Button>
@@ -115,7 +114,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
               type="button" 
               variant="outline" 
               onClick={handleTryDemo}
-              className="h-12 border-2 hover:bg-gray-50"
+              className="h-12 border-2 hover:bg-gray-50 font-bold text-gray-600"
             >
               Try Demo
             </Button>
@@ -136,9 +135,9 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         </div>
       </Card>
 
-      {/* Features Grid - تم الإبقاء عليها كما هي بصرياً */}
+      {/* Features Grid */}
       <div className="grid md:grid-cols-3 gap-6 mt-12">
-        <Card className="p-6 text-center hover:border-purple-300 transition-colors">
+        <Card className="p-6 text-center hover:border-purple-300 transition-all hover:shadow-md cursor-default">
           <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6 text-purple-600" />
           </div>
@@ -148,7 +147,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           </p>
         </Card>
 
-        <Card className="p-6 text-center hover:border-blue-300 transition-colors">
+        <Card className="p-6 text-center hover:border-blue-300 transition-all hover:shadow-md cursor-default">
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -160,7 +159,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           </p>
         </Card>
 
-        <Card className="p-6 text-center hover:border-yellow-300 transition-colors">
+        <Card className="p-6 text-center hover:border-yellow-300 transition-all hover:shadow-md cursor-default">
           <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />

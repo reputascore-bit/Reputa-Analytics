@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'; 
-import { Analytics } from '@vercelanalytics/react';
+// ✅ التصحيح: إضافة الشرطة المائلة المفقودة في المسار
+import { Analytics } from '@vercel/analytics/react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -43,23 +44,20 @@ function ReputaAppContent() {
     if (!address) return;
     setIsLoading(true);
     try {
+      // ✅ نعتمد كلياً على البيانات الديناميكية من ملف wallet.ts المحدث
       const data = await fetchWalletData(address);
       if (data) {
-        // ✅ الإصلاح الجذري: نلغي الرقم 314 ونلغي كلمة Elite الثابتة
         setWalletData({
           ...data,
-          // يتم أخذ السكور وعدد المعاملات والعمر من ملف wallet.ts حصراً
+          // السكور والحالة يتم تحديدهما بناءً على المعطيات الحقيقية المجلوبة
           reputaScore: data.reputaScore, 
-          totalTransactions: data.totalTransactions,
-          accountAge: data.accountAge,
-          // تغيير الحالة بناءً على السكور الفعلي ( Elite للأرقام العالية فقط)
-          trustLevel: data.reputaScore >= 600 ? 'Elite Wallet' : 'Verified User'
+          trustLevel: data.reputaScore >= 600 ? 'Elite' : data.reputaScore >= 300 ? 'Verified' : 'New Account'
         });
         
         setTimeout(() => refreshWallet(address).catch(() => null), 100);
       }
     } catch (error) {
-      alert("Blockchain Error: Address not found");
+      alert("Blockchain Error: Unable to fetch wallet data.");
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +126,7 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 font-black tracking-[0.3em] uppercase">
-        Standalone Explorer v3.2
+        Standalone Explorer v3.5
       </footer>
 
       <AccessUpgradeModal

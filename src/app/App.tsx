@@ -18,34 +18,37 @@ function ReputaAppContent() {
   const [isDemoActive, setIsDemoActive] = useState(false); 
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // فحص المتصفح مرة واحدة عند البداية
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // تحديث: تهيئة الـ SDK فقط عند البداية دون طلب الربط تلقائياً
   useEffect(() => {
     const initApp = async () => {
+      // ✅ إصلاح: إذا لم يكن متصفح باي، نفعل وضع الديمو فوراً ونوقف التحميل
       if (!piBrowser) {
-        setCurrentUser({ username: "Guest", uid: "demo_mode" });
+        setCurrentUser({ username: "Guest", uid: "demo_user" });
         setHasProAccess(true);
         setIsDemoActive(true);
         setIsInitializing(false);
         return;
       }
 
+      // ✅ إذا كان متصفح باي، نحاول تهيئة الـ SDK بصمت
       try {
         await initializePiSDK();
-        // تم إزالة طلب authenticateUser التلقائي لتجنب ظهور الشعار فور الدخول
+        // لا نطلب الربط التلقائي هنا لضمان صمت الدخول
       } catch (e) {
-        console.error("SDK Initialization failed");
+        console.warn("Pi SDK failed, but app will continue.");
       } finally {
         setIsInitializing(false);
       }
     };
+    
     initApp();
   }, [piBrowser]);
 
-  // دالة الربط اليدوي عند الضغط على الزر
   const handleManualLogin = async () => {
+    if (!piBrowser) return;
     try {
       const user = await authenticateUser(['username', 'payments']);
       if (user) {
@@ -54,7 +57,7 @@ function ReputaAppContent() {
         setHasProAccess(isVIP);
       }
     } catch (e) {
-      alert("Link failed or cancelled");
+      alert("Link failed");
     }
   };
 
@@ -66,7 +69,7 @@ function ReputaAppContent() {
       await refreshWallet(address);
       setWalletData({
         ...data,
-        reputaScore: data.balance > 0 ? 314 : 100, // بيانات حقيقية بناءً على الرصيد
+        reputaScore: data.balance > 0 ? 314 : 100, 
         trustLevel: 'Elite'
       });
     } catch (error) {
@@ -82,20 +85,16 @@ function ReputaAppContent() {
       setIsUpgradeModalOpen(false);
       return;
     }
-
     try {
-      // إذا لم يكن المستخدم قد ربط حسابه بعد، نطلبه الآن لإتمام الدفع
       let user = currentUser;
       if (!user) {
         user = await authenticateUser(['username', 'payments']);
         setCurrentUser(user);
       }
-
       if (user?.uid) {
         const success = await createVIPPayment(user.uid);
         if (success) {
           setHasProAccess(true);
-          setIsDemoActive(false);
           setIsUpgradeModalOpen(false);
         }
       }
@@ -104,45 +103,40 @@ function ReputaAppContent() {
     }
   };
 
-  if (isInitializing) {
+  // ✅ شاشة التحميل تظهر فقط داخل متصفح باي أثناء التهيئة
+  if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-purple-700 font-bold animate-pulse text-sm">Initializing Secure Protocol...</p>
-        </div>
+        <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+      <header className="border-b p-4 bg-white/90 backdrop-blur-sm sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-9 h-9" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg">Reputa Score</h1>
             <p className="text-[11px] text-gray-500 font-medium">
               <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'} 
-              {isDemoActive && <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[8px] font-bold uppercase">Preview Mode</span>}
+              {isDemoActive && <span className="ml-2 px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-bold">PREVIEW</span>}
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {/* زر الربط اليدوي يظهر فقط إذا لم يتم الربط وكنت داخل متصفح باي */}
           {piBrowser && !currentUser?.uid && (
             <button 
               onClick={handleManualLogin}
-              className="text-[10px] bg-purple-600 text-white px-3 py-1.5 rounded-md font-bold hover:bg-purple-700 transition-all flex items-center gap-1 shadow-sm"
+              className="text-[10px] bg-purple-600 text-white px-3 py-1.5 rounded font-bold shadow-sm"
             >
               Link Account
             </button>
           )}
-
-          {/* شارة VIP تظهر فقط للمستخدم الحقيقي المرقّى وليس في الديمو */}
           {hasProAccess && !isDemoActive && (
-            <span className="text-[9px] bg-yellow-400 text-white font-black px-2 py-1 rounded-full shadow-sm animate-bounce">VIP</span>
+            <span className="text-[9px] bg-yellow-400 text-white font-black px-2 py-1 rounded-full shadow-sm animate-pulse">VIP</span>
           )}
         </div>
       </header>
@@ -151,7 +145,7 @@ function ReputaAppContent() {
         {isLoading ? (
           <div className="flex flex-col items-center py-20 text-purple-600 font-bold">
             <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="uppercase text-[10px] tracking-widest">Analyzing Blockchain Data...</p>
+            <p className="uppercase text-[10px] tracking-widest">Analyzing Blockchain...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -165,11 +159,10 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 tracking-widest font-bold">
-        {isDemoActive ? 'Public Data Explorer v2.1' : 'Secure Pi Network Mainnet'}
+      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50 font-bold tracking-widest uppercase">
+        {isDemoActive ? 'Public Explorer Mode' : 'Pi Network Live'}
       </footer>
 
-      {/* المودال لا يظهر في الديمو أبداً */}
       {!isDemoActive && (
         <AccessUpgradeModal
           isOpen={isUpgradeModalOpen}

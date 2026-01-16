@@ -21,20 +21,25 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
+  // 1. إصلاح منطق التحميل: ضمان عدم التعليق في أي متصفح
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        // وضع الديمو (خارج باي) - حرية كاملة
-        setCurrentUser({ username: "Guest Explorer", uid: "demo" });
-        setHasProAccess(true); // لفتح الميزات
+        setCurrentUser({ username: "Guest", uid: "demo" });
+        setHasProAccess(true);
         setIsDemoActive(true);
         setIsInitializing(false);
         return;
       }
+
       try {
-        await initializePiSDK();
+        // نضع مهلة زمنية (Timeout) للـ SDK لكي لا يعلق التحميل للأبد
+        await Promise.race([
+          initializePiSDK(),
+          new Promise((_, reject) => setTimeout(() => reject('Timeout'), 5000))
+        ]);
       } catch (e) {
-        setIsDemoActive(true);
+        console.warn("Pi SDK not responding, bypassing...");
       } finally {
         setIsInitializing(false);
       }
@@ -42,7 +47,9 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
+  // 2. إصلاح دالة الربط (Manual Login)
   const handleManualLogin = async () => {
+    if (!piBrowser) return;
     try {
       const user = await authenticateUser(['username', 'payments']);
       if (user) {
@@ -51,74 +58,77 @@ function ReputaAppContent() {
         setHasProAccess(isVIP);
       }
     } catch (e) {
-      alert("Authentication failed");
+      alert("Please open in Pi Browser to link account.");
     }
   };
 
+  // 3. جلب بيانات المحفظة مع حماية من التعليق
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
-      await refreshWallet(address);
-      setWalletData({
-        ...data,
-        reputaScore: data.balance > 0 ? 314 : 100,
-        trustLevel: 'Elite'
-      });
+      if (data) {
+        await refreshWallet(address);
+        setWalletData({
+          ...data,
+          reputaScore: 314, 
+          trustLevel: 'Elite'
+        });
+      }
     } catch (error) {
-      alert('Network Sync Error');
+      alert('Error: Check wallet address or connection.');
     } finally {
       setIsLoading(false);
     }
   };
 
   if (isInitializing && piBrowser) {
-    return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white text-purple-600 font-bold">
+        Loading Reputa...
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      <header className="border-b p-4 flex justify-between items-center bg-white sticky top-0 z-50">
+    <div className="min-h-screen bg-white flex flex-col">
+      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-2">
           <img src={logoImage} alt="logo" className="w-8 h-8" />
-          <h1 className="font-bold text-purple-700">Reputa Score</h1>
+          <div>
+            <h1 className="font-bold text-purple-700 leading-none">Reputa Score</h1>
+            <p className="text-[10px] text-gray-400 mt-1">
+              <span className="text-purple-400 font-semibold">Welcome,</span> {currentUser?.username || 'Guest'}
+            </p>
+          </div>
         </div>
-        {currentUser?.username && (
-          <p className="text-[10px] text-gray-500 font-bold">
-            <span className="text-purple-400">Welcome,</span> {currentUser.username}
-          </p>
+
+        {/* زر الربط: حجم متوسط، أنيق، وغير مزعج */}
+        {piBrowser && !currentUser?.uid && (
+          <button 
+            onClick={handleManualLogin}
+            className="text-[10px] bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg border border-purple-100 font-bold hover:bg-purple-100 transition-all"
+          >
+            Connect Pi
+          </button>
         )}
       </header>
 
-      <main className="container mx-auto px-4 py-8 flex-1 flex flex-col justify-center">
-        {/* ✅ أيقونة الربط: واضحة، جذابة، وفي المنتصف */}
-        {piBrowser && !currentUser?.uid && !walletData && (
-          <div className="mb-10 p-6 border-2 border-dashed border-purple-200 rounded-2xl text-center bg-purple-50/50">
-            <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-200">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-              </svg>
-            </div>
-            <h2 className="text-purple-800 font-bold text-lg">Connect Pi Account</h2>
-            <p className="text-gray-500 text-xs mb-4">Link your account to save your scores and access VIP features</p>
-            <button 
-              onClick={handleManualLogin}
-              className="bg-purple-600 text-white px-8 py-3 rounded-full font-bold shadow-md hover:scale-105 transition-transform"
-            >
-              Connect Now
-            </button>
-          </div>
-        )}
-
+      <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
-          <div className="text-center py-20 animate-pulse text-purple-600 font-bold uppercase tracking-tighter">Analyzing Blockchain...</div>
+          <div className="flex flex-col items-center py-20">
+            <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] mt-4 font-bold text-gray-400 tracking-widest uppercase">Fetching Data...</p>
+          </div>
         ) : !walletData ? (
-          <WalletChecker onCheck={handleWalletCheck} />
+          <div className="max-w-md mx-auto">
+             <WalletChecker onCheck={handleWalletCheck} />
+          </div>
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            // ✅ الديمو يفتح التقرير فوراً دون حواجز
+            // الديمو يفتح التقرير فوراً دون طلب VIP
             isProUser={isDemoActive ? true : hasProAccess} 
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
@@ -126,18 +136,15 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-4 text-center text-[9px] text-gray-300 font-bold uppercase tracking-widest">
-        {isDemoActive ? 'Preview Environment' : 'Secure Protocol Live'}
+      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 font-bold uppercase tracking-widest">
+        {isDemoActive ? 'Public Preview' : 'Official Pi Protocol'}
       </footer>
 
-      {/* المودال يظهر فقط للمستخدمين الحقيقيين وليس في الديمو */}
       {!isDemoActive && (
         <AccessUpgradeModal
           isOpen={isUpgradeModalOpen}
           onClose={() => setIsUpgradeModalOpen(false)}
-          onUpgrade={async () => {
-             // منطق الدفع الحقيقي
-          }}
+          onUpgrade={() => {/* كود الدفع */}}
         />
       )}
       <Analytics />

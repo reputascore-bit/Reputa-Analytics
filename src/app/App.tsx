@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'; 
 import { Analytics } from '@vercel/analytics/react';
-import { Send } from 'lucide-react'; // ✅ استيراد أيقونة التلغرام
+import { Send } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -21,23 +21,34 @@ function ReputaAppContent() {
 
   useEffect(() => {
     const initApp = async () => {
+      // ✅ حل مشكلة المتصفح العادي: إذا لم يكن Pi Browser، ندخل فوراً كضيف
       if (!piBrowser) {
         setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
         setIsInitializing(false);
         return;
       }
       try {
+        // إضافة Timeout بسيط لـ SDK لضمان عدم التعليق اللانهائي
+        const sdkTimeout = setTimeout(() => setIsInitializing(false), 5000);
+        
         await initializePiSDK();
         const user = await authenticateUser(['username']).catch(() => null);
         if (user) setCurrentUser(user);
-      } catch (e) { console.warn("Fallback Mode Active"); }
-      finally { setIsInitializing(false); }
+        
+        clearTimeout(sdkTimeout);
+      } catch (e) { 
+        console.warn("Fallback Mode Active"); 
+      } finally { 
+        setIsInitializing(false); 
+      }
     };
     initApp();
   }, [piBrowser]);
 
   const handleTryDemo = () => {
     setIsLoading(true);
+    // ✅ تصفير الحالة السابقة لضمان جلب بيانات الديمو نظيفة
+    setWalletData(null); 
     setTimeout(() => {
       const demoData = {
         address: "GDU72WEH7M3O...MWPDYFBT",
@@ -73,11 +84,13 @@ function ReputaAppContent() {
 
     if (!address) return;
     setIsLoading(true);
+    // ✅ تصفير البيانات فوراً لمسح "الكاش" من المحفظة السابقة ومنع تداخل الإحصائيات
     setWalletData(null); 
     
     try {
       const data = await fetchWalletData(address);
       if (data && typeof data.reputaScore === 'number') {
+        // ✅ نستخدم كائن جديد تماماً لضمان تحديث الـ React DOM
         setWalletData({
           ...data,
           totalTransactions: data.totalTransactions || data.transactions?.length || 0,
@@ -95,8 +108,14 @@ function ReputaAppContent() {
     }
   };
 
+  // ✅ تعديل شرط التحميل ليكون أكثر مرونة
   if (isInitializing && piBrowser) {
-    return <div className="min-h-screen bg-white flex items-center justify-center text-purple-600 font-bold animate-pulse uppercase tracking-widest">Initialising...</div>;
+    return (
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-purple-600 font-black animate-pulse uppercase tracking-widest text-xs">Initialising Reputa...</p>
+      </div>
+    );
   }
 
   return (
@@ -105,17 +124,14 @@ function ReputaAppContent() {
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
-            {/* ✅ تحديث اسم التطبيق */}
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
             <p className="text-[10px] text-gray-400 font-black uppercase">
-               {/* ✅ إضافة كلمة Welcome */}
                Welcome, {currentUser?.username || 'Guest'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* ✅ أيقونة التلغرام في الهيدر */}
           <a 
             href="https://t.me/+zxYP2x_4IWljOGM0" 
             target="_blank" 
@@ -156,7 +172,6 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-6 text-center border-t flex flex-col items-center gap-4">
-        {/* ✅ زر التلغرام في الفوتر */}
         <a 
           href="https://t.me/+zxYP2x_4IWljOGM0" 
           target="_blank" 

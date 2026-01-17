@@ -1,7 +1,7 @@
 import { Redis } from '@upstash/redis'
 import { NextResponse } from 'next/server'
 
-// استخدام الأسماء التي ظهرت في صورتك لضمان الاتصال
+// ربط مباشر باستخدام المتغيرات المتاحة في صورتك
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
   token: process.env.KV_REST_API_TOKEN!,
@@ -10,16 +10,18 @@ const redis = new Redis({
 export async function POST(req: Request) {
   try {
     const { username, wallet } = await req.json();
-    
-    // الحفظ في القائمة
-    await redis.lpush('registered_pioneers', JSON.stringify({
+
+    // نستخدم rpush لضمان الإضافة في نهاية القائمة
+    await redis.rpush('registered_pioneers', JSON.stringify({
       username,
       wallet,
       timestamp: new Date().toISOString()
     }));
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+  } catch (error: any) {
+    // هذا السطر سيظهر لك سبب الفشل الحقيقي في الـ Logs
+    console.error("Redis connection error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

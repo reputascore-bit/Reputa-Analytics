@@ -3,7 +3,7 @@ import { Search, Shield, Info, Lock, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
-import logoImage from '../../assets/logo.svg';
+import logoImage from '../../assets/logo.png'; // تم التأكد من الامتداد الصحيح حسب الكود السابق
 
 interface WalletCheckerProps {
   onCheck: (address: string) => void;
@@ -16,8 +16,8 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // تنظيف العنوان من المسافات الزائدة
-    const cleanAddress = address.trim();
+    // تنظيف العنوان من المسافات الزائدة وتحويله للكبير تلقائياً
+    const cleanAddress = address.trim().toUpperCase();
 
     // القواعد الصارمة لعناوين محفظة Pi Network
     if (!cleanAddress) {
@@ -44,13 +44,14 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
     }
 
     setError('');
+    // ✅ إرسال العنوان النظيف لـ App.tsx ليتم تخزينه في Upstash فوراً
     onCheck(cleanAddress);
   };
 
-  // ✅ التعديل الأخير لضمان عمل الديمو بانسجام مع ملف App.tsx المحدث
+  // ✅ التعديل لضمان عمل الديمو بانسجام مع ملف App.tsx المحدث
   const handleTryDemo = () => {
     setError('');
-    // نرسل 'demo' لكي يفهم App.tsx أنه يجب عرض بيانات الديمو المصلحة (بدون NaN)
+    // نرسل 'demo' لكي يفهم App.tsx أنه يجب عرض بيانات الديمو
     onCheck('demo');
   };
 
@@ -64,7 +65,6 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
             src={logoImage} 
             alt="Reputa Score" 
             className="w-32 h-32 object-contain drop-shadow-2xl relative z-10"
-            style={{ mixBlendMode: 'multiply' }}
           />
         </div>
         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -90,7 +90,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
                 id="wallet-address"
                 type="text"
                 value={address}
-                onChange={(e) => setAddress(e.target.value.toUpperCase())}
+                onChange={(e) => setAddress(e.target.value)}
                 placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                 className="pr-12 h-14 text-lg font-mono uppercase focus:ring-purple-500 border-gray-200"
               />

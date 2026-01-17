@@ -22,9 +22,8 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
     return () => clearTimeout(timer);
   }, [score]);
 
-  // Animate the number display
   useEffect(() => {
-    const duration = 1000; // 1 second
+    const duration = 1000;
     const steps = 60;
     const increment = score / steps;
     let currentStep = 0;
@@ -44,10 +43,11 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
 
   const getGaugeColor = (level: TrustLevel): string => {
     switch (level) {
-      case 'Elite': return '#10b981'; // emerald
-      case 'High': return '#3b82f6'; // blue
-      case 'Medium': return '#eab308'; // yellow
-      case 'Low': return '#ef4444'; // red
+      case 'Elite': return '#10b981';
+      case 'High': return '#3b82f6';
+      case 'Medium': return '#eab308';
+      case 'Low': return '#ef4444';
+      default: return '#3b82f6';
     }
   };
 
@@ -67,11 +67,12 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
         return 'Moderate trust signals detected. Standard verification recommended for significant transactions.';
       case 'Low':
         return 'Limited trust indicators. Enhanced due diligence advised before engaging in transactions.';
+      default: return '';
     }
   };
 
   const gaugeColor = getGaugeColor(trustLevel);
-  const normalizedScore = score / 10; // Convert 0-1000 to 0-100 for animation
+  const normalizedScore = score / 10;
   const rotation = (normalizedScore / 100) * 180 - 90;
 
   return (
@@ -86,9 +87,8 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
       
       <div className="flex flex-col md:flex-row items-center gap-8">
         {/* Gauge Visual */}
-        <div className="relative w-64 h-32 flex-shrink-0">
-          {/* Background Arc */}
-          <svg viewBox="0 0 200 100" className="w-full h-full">
+        <div className="relative w-64 h-36 flex-shrink-0">
+          <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#ef4444" />
@@ -99,7 +99,6 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
               </linearGradient>
             </defs>
             
-            {/* Background track */}
             <path
               d="M 20 80 A 80 80 0 0 1 180 80"
               fill="none"
@@ -108,7 +107,6 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
               strokeLinecap="round"
             />
             
-            {/* Colored arc */}
             <motion.path
               d="M 20 80 A 80 80 0 0 1 180 80"
               fill="none"
@@ -120,14 +118,14 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
               transition={{ duration: 1, ease: 'easeOut' }}
             />
 
-            {/* Needle */}
+            {/* Needle - Adjusted y2 to 35 to stay away from the score */}
             <motion.line
               x1="100"
               y1="80"
               x2="100"
-              y2="20"
+              y2="35"
               stroke={gaugeColor}
-              strokeWidth="3"
+              strokeWidth="4"
               strokeLinecap="round"
               initial={{ rotate: -90 }}
               animate={{ rotate: rotation }}
@@ -135,27 +133,29 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
               style={{ transformOrigin: '100px 80px' }}
             />
             
-            {/* Center dot */}
-            <circle cx="100" cy="80" r="6" fill={gaugeColor} />
+            {/* Center dot - Reduced radius */}
+            <circle cx="100" cy="80" r="4" fill={gaugeColor} />
           </svg>
 
-          {/* Score Display */}
-          <div className="absolute inset-x-0 bottom-0 text-center">
+          {/* Score Display - Centered and lifted with Z-index */}
+          <div className="absolute inset-x-0 top-[45%] flex flex-col items-center justify-center z-10 pointer-events-none">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: 'spring' }}
-              className="inline-flex flex-col items-center"
+              className="flex flex-col items-center"
             >
-              <span className="font-bold text-3xl" style={{ color: gaugeColor }}>
+              <span className="font-black text-4xl leading-none" style={{ color: gaugeColor }}>
                 {displayScore}
               </span>
-              <span className="text-xs text-gray-500">out of 1000</span>
+              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                out of 1000
+              </span>
             </motion.div>
           </div>
         </div>
 
-        {/* Description */}
+        {/* Description Section */}
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-4">
             <div 
@@ -176,7 +176,6 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
 
           <p className="text-gray-700 mb-4">{getDescription()}</p>
 
-          {/* Score Breakdown */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Balance Weight:</span>

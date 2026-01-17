@@ -1,4 +1,4 @@
-import { Redis } from '@upstash/redis';
+import { Redis } from '@upstash/redis'; 
 import { NextResponse } from 'next/server';
 
 // الاتصال التلقائي باستخدام المتغيرات التي أضافها Vercel الآن

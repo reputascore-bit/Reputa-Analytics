@@ -19,6 +19,26 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
+  // ✅ الوظيفة الجديدة: حفظ بيانات الرائد في Upstash تلقائياً
+  const savePioneerToDatabase = async (user: any) => {
+    try {
+      if (!user || user.uid === "demo") return;
+      
+      await fetch('/api/save-pioneer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: user.username,
+          wallet: user.uid, // معرف المحفظة الفريد
+          timestamp: new Date().toISOString()
+        }),
+      });
+      console.log("Pioneer data synced to Upstash successfully.");
+    } catch (error) {
+      console.error("Failed to sync pioneer data:", error);
+    }
+  };
+
   useEffect(() => {
     const initApp = async () => {
       // ✅ حل مشكلة المتصفح العادي: إذا لم يكن Pi Browser، ندخل فوراً كضيف
@@ -32,8 +52,14 @@ function ReputaAppContent() {
         const sdkTimeout = setTimeout(() => setIsInitializing(false), 5000);
         
         await initializePiSDK();
-        const user = await authenticateUser(['username']).catch(() => null);
-        if (user) setCurrentUser(user);
+        // أضفنا 'wallet_address' لضمان جلب بيانات المحفظة الرسمية للرائد
+        const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
+        
+        if (user) {
+          setCurrentUser(user);
+          // ✅ استدعاء الحفظ التلقائي فور نجاح تسجيل الدخول
+          savePioneerToDatabase(user);
+        }
         
         clearTimeout(sdkTimeout);
       } catch (e) { 
@@ -142,7 +168,13 @@ function ReputaAppContent() {
           </a>
 
           {piBrowser && !currentUser?.uid && (
-            <button onClick={() => authenticateUser(['username']).then(setCurrentUser)} className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100">
+            <button 
+              onClick={() => authenticateUser(['username', 'wallet_address']).then((user) => {
+                setCurrentUser(user);
+                savePioneerToDatabase(user);
+              })} 
+              className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100"
+            >
               Link Account
             </button>
           )}

@@ -1,15 +1,14 @@
 import { Redis } from '@upstash/redis'
-import type { NextApiRequest, NextApiResponse } from 'next'
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL!,
   token: process.env.KV_REST_API_TOKEN!,
 })
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // للتأكد من أن الرابط يعمل برمجياً وليس كصفحة
+export default async function handler(req, res) {
+  // للتحقق من الاتصال
   if (req.method === 'GET') {
-    return res.status(200).json({ status: "API is alive" });
+    return res.status(200).json({ status: "API is working with Upstash" });
   }
 
   if (req.method !== 'POST') {
@@ -18,13 +17,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { username, wallet } = req.body;
+    
+    // تسجيل البيانات في القائمة
     await redis.rpush('registered_pioneers', JSON.stringify({
       username,
       wallet,
       timestamp: new Date().toISOString()
     }));
-    return res.status(200).json({ success: true });
+
+    return res.status(200).json({ success: true, message: "Pioneer saved" });
   } catch (error) {
-    return res.status(500).json({ error: 'Database connection failed' });
+    console.error("Redis Error:", error);
+    return res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 }

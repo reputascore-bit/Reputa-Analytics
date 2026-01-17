@@ -19,7 +19,7 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // ✅ الوظيفة الجديدة: حفظ بيانات الرائد في Upstash تلقائياً
+  // ✅ وظيفة حفظ بيانات الرائد في Upstash
   const savePioneerToDatabase = async (user: any) => {
     try {
       if (!user || user.uid === "demo") return;
@@ -29,11 +29,11 @@ function ReputaAppContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: user.username,
-          wallet: user.uid, // معرف المحفظة الفريد
+          wallet: user.uid,
           timestamp: new Date().toISOString()
         }),
       });
-      console.log("Pioneer data synced to Upstash successfully.");
+      console.log("Pioneer data synced to Upstash.");
     } catch (error) {
       console.error("Failed to sync pioneer data:", error);
     }
@@ -41,23 +41,20 @@ function ReputaAppContent() {
 
   useEffect(() => {
     const initApp = async () => {
-      // ✅ حل مشكلة المتصفح العادي: إذا لم يكن Pi Browser، ندخل فوراً كضيف
       if (!piBrowser) {
         setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
         setIsInitializing(false);
         return;
       }
       try {
-        // إضافة Timeout بسيط لـ SDK لضمان عدم التعليق اللانهائي
         const sdkTimeout = setTimeout(() => setIsInitializing(false), 5000);
         
         await initializePiSDK();
-        // أضفنا 'wallet_address' لضمان جلب بيانات المحفظة الرسمية للرائد
         const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
         
         if (user) {
           setCurrentUser(user);
-          // ✅ استدعاء الحفظ التلقائي فور نجاح تسجيل الدخول
+          // ✅ حفظ تلقائي عند فتح التطبيق
           savePioneerToDatabase(user);
         }
         
@@ -73,7 +70,6 @@ function ReputaAppContent() {
 
   const handleTryDemo = () => {
     setIsLoading(true);
-    // ✅ تصفير الحالة السابقة لضمان جلب بيانات الديمو نظيفة
     setWalletData(null); 
     setTimeout(() => {
       const demoData = {
@@ -110,18 +106,22 @@ function ReputaAppContent() {
 
     if (!address) return;
     setIsLoading(true);
-    // ✅ تصفير البيانات فوراً لمسح "الكاش" من المحفظة السابقة ومنع تداخل الإحصائيات
     setWalletData(null); 
     
     try {
       const data = await fetchWalletData(address);
       if (data && typeof data.reputaScore === 'number') {
-        // ✅ نستخدم كائن جديد تماماً لضمان تحديث الـ React DOM
         setWalletData({
           ...data,
           totalTransactions: data.totalTransactions || data.transactions?.length || 0,
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
+
+        // ✅ حفظ البيانات في Upstash أيضاً عند فحص المحفظة لزيادة التفاعل
+        if (currentUser && currentUser.uid !== "demo") {
+           savePioneerToDatabase(currentUser);
+        }
+
         setTimeout(() => refreshWallet(address).catch(() => null), 200);
       } else {
         alert("Data format error. Please try again.");
@@ -134,7 +134,6 @@ function ReputaAppContent() {
     }
   };
 
-  // ✅ تعديل شرط التحميل ليكون أكثر مرونة
   if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">

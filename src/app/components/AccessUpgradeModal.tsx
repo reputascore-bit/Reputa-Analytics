@@ -1,12 +1,6 @@
 import { Sparkles, Lock, Check } from 'lucide-react';  
 import { Button } from './ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
@@ -19,29 +13,20 @@ interface AccessUpgradeModalProps {
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
   
   const handlePayment = async (e: React.MouseEvent) => {
-    // منع أي سلوك افتراضي للزر قد يعطل المتصفح
     e.preventDefault();
     e.stopPropagation();
-
-    console.log("Attempting payment for user:", currentUser?.uid);
 
     if (!currentUser || currentUser.uid === "demo") {
       alert("Please link your Pi account first.");
       return;
     }
 
-    try {
-      // استدعاء الدفع مباشرة
-      await createVIPPayment(currentUser.uid, () => {
-        onUpgrade();
-        onClose();
-        alert("✅ VIP Unlocked!");
-      });
-    } catch (err: any) {
-      console.error("SDK Trigger Error:", err);
-      // في حال فشل الـ SDK تماماً، سنظهر رسالة توضيحية
-      alert("Pi SDK Error: Make sure you are using Pi Browser.");
-    }
+    // استدعاء الدالة باسم المتغير الصحيح uid
+    await createVIPPayment(currentUser.uid, () => {
+      onUpgrade();
+      onClose();
+      alert("✅ VIP Unlocked!");
+    });
   };
 
   return (

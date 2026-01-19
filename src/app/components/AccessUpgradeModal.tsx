@@ -1,4 +1,4 @@
-// ✅ دالة التعامل مع ضغطة الزر مع تشخيص الأخطاء
+// ✅ النسخة المصححة والمؤمنة
   const handlePayment = async () => {
     console.log("Button pressed");
     
@@ -14,16 +14,30 @@
     }
 
     try {
-      alert("Initiating Pi Payment for: " + currentUser.username);
+      // تنبيه لبدء العملية
+      console.log("Initiating Pi Payment for:", currentUser.username);
       
-      // 2. استدعاء الدالة ومراقبة التنفيذ
-      await createVIPPayment(currentUser.uid, () => {
-        alert("Success! Callback triggered.");
-        onUpgrade();
-        onClose();
+      // 2. استدعاء دالة الدفع
+      // نمرر الـ UID ودالة النجاح
+      await createVIPPayment(currentUser.uid, async () => {
+        try {
+          alert("✅ Payment Confirmed! Unlocking Features...");
+          
+          // تنفيذ دالة التحديث الموجودة في App.tsx
+          if (typeof onUpgrade === 'function') {
+            await onUpgrade(); 
+          }
+          
+          // إغلاق النافذة
+          onClose();
+        } catch (callbackErr) {
+          console.error("UI Update Error:", callbackErr);
+        }
       });
       
     } catch (err: any) {
-      alert("Crash Error: " + err.message);
+      // إظهار الخطأ إذا فشل استدعاء الـ SDK نفسه
+      alert("Payment Failed: " + (err.message || "Unknown Error"));
+      console.error("Pi Payment Error:", err);
     }
   };

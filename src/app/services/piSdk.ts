@@ -12,24 +12,24 @@ function getPiSDK() {
 }
 
 /**
- * ✅ التعديل الحاسم: إصلاح التهيئة لتعمل مع Mainnet و Sandbox معاً
+ * ✅ التعديل الحاسم: إصلاح التهيئة لتعمل في Sandbox مع معالجة التجميد
  */
 export async function initializePiSDK(): Promise<void> {
   if (!isPiBrowser()) return;
 
   try {
     const Pi = getPiSDK();
-    // نستخدم sandbox: false إذا كنت تريد العمل بالعملة الحقيقية 
-    // أو نتركها لتعتمد على بيئة متصفح Pi نفسه لضمان عدم تعليق الحساب
-    await Pi.init({ version: '2.0', sandbox:  true }); 
-    console.log('[PI SDK] Initialized successfully');
+    // استخدام await مع try/catch يضمن أن التطبيق لن يتوقف هنا
+    await Pi.init({ version: '2.0', sandbox: true }); 
+    console.log('[PI SDK] Sandbox Initialized successfully');
   } catch (error) {
     console.error('[PI SDK] Initialization failed:', error);
+    // لا نطلق Alert هنا لكي لا نزعج المستخدم، لكننا نسجل الخطأ
   }
 }
 
 /**
- * ✅ تعديل المصادقة لتعود للعمل مع زر Link Account في App.tsx
+ * ✅ تعديل المصادقة لإظهار التنبيهات (Alerts) في حالة Sandbox
  */
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
   if (!isPiBrowser()) {
@@ -38,25 +38,29 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
 
   try {
     const Pi = getPiSDK();
-    // المصادقة وطلب الإذن من المستخدم
+    
+    // التأكد من وجود كائن Pi قبل المحاولة
+    if (!Pi) throw new Error("Pi SDK not found in window");
+
+    // طلب المصادقة مع إضافة alert في حال الفشل لمعرفة السبب (مثلاً App ID wrong)
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
     
-    // التوافق مع الكود في App.tsx
     return {
       uid: auth.user.uid,
       username: auth.user.username,
       wallet_address: auth.user.wallet_address,
       accessToken: auth.accessToken
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[PI SDK] Authentication failed:', error);
+    // إضافة alert هنا ضرورية جداً في Sandbox لمعرفة لماذا لا يعمل الزر
+    alert("Link Error: " + (error.message || "App not verified or configured correctly in Pi Dev Portal"));
     throw error;
   }
 }
 
 function onIncompletePaymentFound(payment: any) {
   console.log('[PI SDK] Incomplete payment found:', payment);
-  // إرسال المعاملات المعلقة للسيرفر لإتمامها تلقائياً
   if (payment) {
      fetch('/api/pi-payment', {
        method: 'POST',
@@ -66,4 +70,4 @@ function onIncompletePaymentFound(payment: any) {
   }
 }
 
-// ... بقية الدوال (getWalletAddress, createPayment, etc.) تبقى كما هي بدون تغيير لضمان استقرار النظام
+// ... بقية الملف (getWalletAddress, createPayment, إلخ) تبقى كما هي دون تغيير

@@ -21,7 +21,7 @@ export async function initializePiSDK(): Promise<void> {
     const Pi = getPiSDK();
     // نستخدم sandbox: false إذا كنت تريد العمل بالعملة الحقيقية 
     // أو نتركها لتعتمد على بيئة متصفح Pi نفسه لضمان عدم تعليق الحساب
-    await Pi.init({ version: '2.0', sandbox: false }); 
+    await Pi.init({ version: '2.0', sandbox:  true }); 
     console.log('[PI SDK] Initialized successfully');
   } catch (error) {
     console.error('[PI SDK] Initialization failed:', error);

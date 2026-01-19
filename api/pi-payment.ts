@@ -17,7 +17,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const { paymentId, txid, action, uid } = body; // استلام الـ uid مهم هنا
+    const { paymentId, txid, action, uid } = body;
 
     if (action === 'approve') {
       const response = await fetch(`https://api.minepi.com/v2/payments/${paymentId}/approve`, {
@@ -27,8 +27,11 @@ export default async function handler(req: any, res: any) {
           'Content-Type': 'application/json'
         }
       });
+      
       if (!response.ok) return res.status(400).json({ error: "Approval Failed" });
-      return res.status(200).json({ success: true });
+      
+      // ✅ التعديل الحاسم: إرجاع كائن يحتوي على رسالة واضحة للمتصفح
+      return res.status(200).json({ message: "Approved", success: true });
     }
 
     if (action === 'complete') {
@@ -42,14 +45,18 @@ export default async function handler(req: any, res: any) {
       });
 
       if (response.ok) {
-        // ✅ الآن يتم تفعيل الـ VIP للمستخدم الصحيح في Redis
         if (uid) {
+          // تفعيل الـ VIP في Redis
           await redis.set(`vip_status:${uid}`, 'active');
           await redis.incr('total_successful_payments');
         }
-        return res.status(200).json({ success: true });
+        // ✅ إرجاع كائن إتمام المعاملة بنجاح
+        return res.status(200).json({ message: "Completed", success: true });
       }
+      
+      return res.status(400).json({ error: "Completion Failed" });
     }
+    
     return res.status(400).json({ error: "Invalid action" });
   } catch (error: any) {
     console.error("Payment API Error:", error);

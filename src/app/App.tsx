@@ -15,16 +15,16 @@ function ReputaAppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  // ✅ إضافة حالة الـ VIP لفتح الميزات بعد الدفع
+  const [isVip, setIsVip] = useState(false);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // ✅ التعديل الرئيسي: وظيفة تقبل العنوان يدوياً لضمان ظهوره في الـ CLI
   const savePioneerToDatabase = async (user: any, manualAddress?: string) => {
     try {
       if (!user || user.uid === "demo") return;
       
-      // نرسل العنوان الذي قام المستخدم بفحصه يدوياً (الذي يبدأ بـ G)
       const finalWallet = manualAddress || user.wallet_address || user.uid;
       
       await fetch('/api/save-pioneer', {
@@ -119,7 +119,6 @@ function ReputaAppContent() {
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
 
-        // ✅ الإصلاح: عند فحص المحفظة، نرسل العنوان المدخل (address) الذي يبدأ بـ G
         if (currentUser && currentUser.uid !== "demo") {
            savePioneerToDatabase(currentUser, address);
         }
@@ -153,7 +152,7 @@ function ReputaAppContent() {
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
             <p className="text-[10px] text-gray-400 font-black uppercase">
-               Welcome, {currentUser?.username || 'Guest'}
+               Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
             </p>
           </div>
         </div>
@@ -183,7 +182,8 @@ function ReputaAppContent() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <WalletAnalysis walletData={walletData} isProUser={true} onReset={() => setWalletData(null)} onUpgradePrompt={() => setIsUpgradeModalOpen(true)} />
+             {/* ✅ تم ربط isProUser بحالة isVip الحقيقية */}
+             <WalletAnalysis walletData={walletData} isProUser={isVip} onReset={() => setWalletData(null)} onUpgradePrompt={() => setIsUpgradeModalOpen(true)} />
           </div>
         )}
       </main>
@@ -195,7 +195,16 @@ function ReputaAppContent() {
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
-      <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} onUpgrade={() => {}} />
+      {/* ✅ التعديل الرئيسي: تمرير currentUser و onUpgrade للمودال */}
+      <AccessUpgradeModal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+        currentUser={currentUser}
+        onUpgrade={() => {
+          setIsVip(true); // تفعيل الـ VIP عند نجاح الدفع
+          setIsUpgradeModalOpen(false);
+        }} 
+      />
       <Analytics />
     </div>
   );

@@ -5,34 +5,44 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || '',
 });
 
+// كلمة سر بسيطة لحماية بياناتك
+const ADMIN_SECRET = "med@2026"; 
+
 export default async function handler(req: any, res: any) {
+  /
+  const { key } = req.query;
+
+  if (key !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized access. Please provide the correct secret key." });
+  }
+
   try {
-    // جلب البيانات الخام
     const rawData = await redis.lrange('pioneers', 0, -1);
 
-    // معالجة البيانات بطريقة ذكية جداً
     const formattedData = rawData.map((item: any) => {
-      // 1. إذا كان العنصر كائناً جاهزاً، نرجعه كما هو
-      if (typeof item === 'object' && item !== null) {
-        return item;
-      }
-      
-      // 2. إذا كان نصاً، نحاول تحويله لـ JSON
-      if (typeof item === 'string') {
-        try {
-          return JSON.parse(item);
-        } catch (e) {
-          // إذا فشل التحويل، نرجعه كنص عادي
-          return { text_entry: item };
-        }
-      }
-      
-      return item;
+      if (typeof item === 'object' && item !== null) return item;
+      try { return JSON.parse(item); } catch { return { raw: item }; }
     });
 
-    // إرسال النتيجة النهائية
+    // إحصائيات سريعة
+    const stats = {
+      total_entries: formattedData.length,
+      real_wallets: formattedData.filter((u: any) => u.wallet?.startsWith('G')).length,
+      last_update: formattedData[0]?.timestamp || "N/A"
+    };
+
+    // تنظيم البيانات: عرض المحافظ الحقيقية أولاً ثم البقية
+    const organizedData = [
+      ...formattedData.filter((u: any) => u.wallet?.startsWith('G')),
+      ...formattedData.filter((u: any) => !u.wallet?.startsWith('G'))
+    ];
+
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(formattedData);
+    return res.status(200).send(JSON.stringify({
+      status: "Success",
+      statistics: stats,
+      pioneers: organizedData
+    }, null, 2));
 
   } catch (error: any) {
     return res.status(500).json({ error: "Fetch Error", detail: error.message });

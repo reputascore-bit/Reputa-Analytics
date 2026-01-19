@@ -7,17 +7,36 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+// ✅ استيراد دالة الدفع
+import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade: () => void;
+  currentUser?: any; // إضافة المستخدم لربط الدفع بحسابه
 }
 
-export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgradeModalProps) {
+export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
+  
+  // ✅ دالة التعامل مع ضغطة الزر
+  const handlePayment = async () => {
+    if (!currentUser || currentUser.uid === "demo") {
+      alert("Please link your Pi account first.");
+      return;
+    }
+
+    // استدعاء دالة الدفع من ملف piPayments.ts
+    await createVIPPayment(currentUser.uid, () => {
+      // هذه هي وظيفة النجاح (onSuccess)
+      onUpgrade(); // تفعيل وضع الـ Pro في الواجهة
+      onClose();   // إغلاق النافذة
+      alert("✅ Advanced Insights Unlocked Successfully!");
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* تعديل max-w ليكون مناسباً للجوال مع إضافة max-h لضمان ظهور زر الدفع */}
       <DialogContent className="max-w-2xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
@@ -28,9 +47,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
           </DialogDescription>
         </DialogHeader>
 
-        {/* إضافة حاوية قابلة للتمرير للميزات لكي لا تدفع زر الدفع خارج الشاشة */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          {/* Current vs Advanced */}
           <div className="grid md:grid-cols-2 gap-4">
             {/* Explorer View */}
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
@@ -95,7 +112,6 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
             </div>
           </div>
 
-          {/* What You Get */}
           <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100">
             <h3 className="font-semibold mb-3 text-gray-800 text-sm">What Your Wallet Says About You</h3>
             <div className="grid grid-cols-1 gap-2 text-[12px]">
@@ -111,7 +127,6 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
           </div>
         </div>
 
-        {/* قسم الدفع: تم تثبيته في الأسفل بخلفية بيضاء ليكون سهل الوصول */}
         <div className="p-6 bg-white border-t mt-auto shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
           <div className="text-center mb-4">
             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">One-time Access</p>
@@ -122,7 +137,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
           </div>
           
           <Button 
-            onClick={onUpgrade}
+            onClick={handlePayment} // ✅ تم الربط هنا
             className="w-full h-14 bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-700 hover:to-blue-800 gap-3 rounded-xl shadow-lg active:scale-[0.98] transition-all"
           >
             <Sparkles className="w-5 h-5 text-white animate-pulse" />

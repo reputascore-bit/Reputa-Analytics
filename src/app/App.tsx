@@ -30,7 +30,7 @@ function ReputaAppContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: user.username,
+          username: user.Welcome username,
           uid: user.uid,
           wallet: finalWallet,
           timestamp: new Date().toISOString()

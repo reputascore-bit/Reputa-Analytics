@@ -20,29 +20,27 @@ interface AccessUpgradeModalProps {
 // ✅ التعديل الحاسم: استخدام export قبل الوظيفة مباشرة لحل مشكلة Vercel Build
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
   
-  // ✅ دالة التعامل مع الدفع مع تنبيهات لتتبع التنفيذ
+  // ✅ التعديل المطلوب: دالة دفع نظيفة لضمان فتح المحفظة فوراً
   const handlePayment = async () => {
-    console.log("Payment process started");
-    
+    // 1. التحقق الصامت من وجود المستخدم
     if (!currentUser || currentUser.uid === "demo") {
-      alert("Please link your Pi account first (Demo mode cannot process payments).");
+      alert("Please link your Pi account first.");
       return;
     }
 
     try {
-      // تنبيه لبدء العملية في متصفح Pi
-      alert("Opening Pi Wallet for: " + currentUser.username);
-
-      // استدعاء دالة الدفع
+      // ✅ استدعاء الدفع مباشرة.
+      // ملاحظة: حذفنا الـ alert السابق لأن متصفح Pi قد يحظر فتح المحفظة إذا وجد نافذة منبثقة تعترض الطريق.
       await createVIPPayment(currentUser.uid, () => {
-        // هذه الوظيفة تُنفذ فقط عند نجاح الدفع
-        alert("✅ Transaction Successful! Unlocking VIP Features.");
-        onUpgrade(); // تحديث حالة التطبيق في App.tsx
-        onClose();   // إغلاق النافذة
+        // 2. التنفيذ عند النجاح فقط
+        alert("✅ Transaction Successful! VIP Features Unlocked.");
+        onUpgrade(); // تحديث الواجهة لتصبح VIP
+        onClose();   // إغلاق المودال
       });
       
     } catch (err: any) {
-      alert("Payment Error: " + (err.message || "Unknown error occurred"));
+      console.error("Payment SDK Error:", err);
+      alert("Payment failed to initialize. Please try again inside Pi Browser.");
     }
   };
 

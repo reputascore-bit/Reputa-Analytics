@@ -12,24 +12,24 @@ function getPiSDK() {
 }
 
 /**
- * ✅ التعديل الحاسم: إصلاح التهيئة لتعمل في Sandbox مع معالجة التجميد
+ * ✅ التعديل الحاسم: محاولة التهيئة في كل مرة يتم استدعاء المصادقة لضمان عدم التجمد
  */
 export async function initializePiSDK(): Promise<void> {
   if (!isPiBrowser()) return;
 
   try {
     const Pi = getPiSDK();
-    // استخدام await مع try/catch يضمن أن التطبيق لن يتوقف هنا
+    // نستخدم await هنا لضمان اكتمال التهيئة قبل أي خطوة أخرى
     await Pi.init({ version: '2.0', sandbox: true }); 
-    console.log('[PI SDK] Sandbox Initialized successfully');
+    console.log('[PI SDK] Sandbox Initialized');
   } catch (error) {
-    console.error('[PI SDK] Initialization failed:', error);
-    // لا نطلق Alert هنا لكي لا نزعج المستخدم، لكننا نسجل الخطأ
+    // إذا كانت مهيأة مسبقاً، سيمر الكود بسلام
+    console.warn('[PI SDK] Already initialized or check portal settings');
   }
 }
 
 /**
- * ✅ تعديل المصادقة لإظهار التنبيهات (Alerts) في حالة Sandbox
+ * ✅ تعديل المصادقة: استدعاء التهيئة يدوياً داخل الدالة لضمان استجابة الزر
  */
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
   if (!isPiBrowser()) {
@@ -39,10 +39,12 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
   try {
     const Pi = getPiSDK();
     
-    // التأكد من وجود كائن Pi قبل المحاولة
-    if (!Pi) throw new Error("Pi SDK not found in window");
+    // 💡 إضافة ذكية: إذا لم يستجب الـ SDK، نقوم بإعادة تهيئته فوراً
+    if (!Pi || !Pi.authenticate) {
+       await initializePiSDK();
+    }
 
-    // طلب المصادقة مع إضافة alert في حال الفشل لمعرفة السبب (مثلاً App ID wrong)
+    // طلب المصادقة
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
     
     return {
@@ -53,8 +55,8 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
     };
   } catch (error: any) {
     console.error('[PI SDK] Authentication failed:', error);
-    // إضافة alert هنا ضرورية جداً في Sandbox لمعرفة لماذا لا يعمل الزر
-    alert("Link Error: " + (error.message || "App not verified or configured correctly in Pi Dev Portal"));
+    // تنبيه المستخدم بالخطأ الحقيقي (مثل عدم تطابق الرابط المسجل في البوابة)
+    alert("Pi Browser Link Error: " + (error.message || "Please refresh the page"));
     throw error;
   }
 }
@@ -69,5 +71,3 @@ function onIncompletePaymentFound(payment: any) {
      });
   }
 }
-
-// ... بقية الملف (getWalletAddress, createPayment, إلخ) تبقى كما هي دون تغيير

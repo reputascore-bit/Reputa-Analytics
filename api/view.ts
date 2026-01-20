@@ -53,7 +53,7 @@ export default async function handler(req: any, res: any) {
         if (!pioneerMap.has(username)) {
           pioneerMap.set(username, {
             username: username,
-            wallet: p.wallet,
+            wallets: new Set(p.wallet ? [p.wallet] : []),
             timestamps: [p.timestamp],
             count: 1
           });
@@ -61,13 +61,8 @@ export default async function handler(req: any, res: any) {
           const existing = pioneerMap.get(username);
           existing.count += 1;
           existing.timestamps.push(p.timestamp);
+          if (p.wallet) existing.wallets.add(p.wallet);
           
-          // ✅ الأولوية: إذا كان العنوان الجديد يبدأ بـ G والقديم لا، نحدثه
-          if (p.wallet?.startsWith('G') && !existing.wallet?.startsWith('G')) {
-            existing.wallet = p.wallet;
-          }
-          
-          // الحفاظ على ترتيب التواريخ (الأحدث أولاً)
           existing.timestamps.sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
         }
       } catch (e) {}
@@ -85,9 +80,14 @@ export default async function handler(req: any, res: any) {
     const paginatedPioneers = allPioneers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     const rows = paginatedPioneers.map((u: any) => {
-      // إعداد قائمة بالتواريخ السابقة لإظهارها عند الحاجة
       const historyTooltip = u.timestamps.slice(1, 5).map((t: any) => new Date(t).toLocaleString()).join('\\n');
       
+      // منطق اختيار المحفظة الأساسية (تفضل التي تبدأ بـ G)
+      const walletArray = Array.from(u.wallets);
+      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || 'N/A';
+      const otherWalletsCount = walletArray.length - 1;
+      const allWalletsTooltip = walletArray.join('\\n');
+
       return `
       <tr>
         <td class="user-cell">
@@ -97,8 +97,8 @@ export default async function handler(req: any, res: any) {
             </div>
         </td>
         <td class="wallet-cell">
-          <span class="status-dot ${u.wallet?.startsWith('G') ? 'active' : 'inactive'}"></span>
-          <code>${u.wallet || 'N/A'}</code>
+          <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
+          <code title="All Wallets:\\n${allWalletsTooltip}">${primaryWallet} ${otherWalletsCount > 0 ? `<b style="color:#38bdf8; font-size:10px;">(+${otherWalletsCount})</b>` : ''}</code>
         </td>
         <td class="date-cell">
           <div class="last-seen">Last: ${new Date(u.timestamps[0]).toLocaleString()}</div>
@@ -125,35 +125,26 @@ export default async function handler(req: any, res: any) {
           body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
           .container { max-width: 1240px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 20px; border-radius: 12px; color: white; }
-          
           .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-          
           .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
           .stat-card { background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
           .stat-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
           .stat-value { font-size: 20px; font-weight: 800; }
-
           .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
           table { width: 100%; border-collapse: collapse; }
           th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
           td { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
-          
           .user-info { display: flex; flex-direction: column; gap: 4px; }
           .user-info .name { font-weight: 700; color: var(--primary); }
-          
           .visit-badge { display: inline-block; width: fit-content; background: #eef2ff; color: #6366f1; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: help; }
-          
           .date-cell .last-seen { font-weight: 600; color: #1e293b; }
           .date-cell .first-seen { font-size: 10px; color: #94a3b8; }
-
           .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; height: 80vh; overflow-y: auto; position: sticky; top: 20px; }
           .feedback-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; line-height: 1.5; }
-          
           .pagination { margin-top: 25px; display: flex; gap: 8px; align-items: center; justify-content: center; }
           .pg-btn { padding: 10px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; transition: 0.2s; }
           .pg-btn:hover { border-color: var(--accent); color: var(--accent); }
           .pg-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
-          
           .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
           .active { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.4); } 
           .inactive { background: #ef4444; }
@@ -171,7 +162,7 @@ export default async function handler(req: any, res: any) {
             <div class="main-content">
               <div class="stats-grid">
                 <div class="stat-card"><div class="stat-label">Unique Pioneers</div><div class="stat-value">${totalItems}</div></div>
-                <div class="stat-card"><div class="stat-label">Verified Wallet Access</div><div class="stat-value" style="color:#10b981">${allPioneers.filter((u:any) => u.wallet?.startsWith('G')).length}</div></div>
+                <div class="stat-card"><div class="stat-label">Verified Wallet Access</div><div class="stat-value" style="color:#10b981">${allPioneers.filter((u:any) => Array.from(u.wallets).some((w:any)=>w.startsWith('G'))).length}</div></div>
                 <div class="stat-card"><div class="stat-label">Feedback Received</div><div class="stat-value" style="color:#6366f1">${feedbacks.length}</div></div>
               </div>
 

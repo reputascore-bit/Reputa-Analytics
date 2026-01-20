@@ -11,7 +11,6 @@ export default async function handler(req: any, res: any) {
   const ITEMS_PER_PAGE = 40;
   const currentPage = parseInt(page);
 
-  // 1. واجهة تسجيل الدخول
   if (password !== ADMIN_PASSWORD) {
     return res.status(200).send(`
       <!DOCTYPE html>
@@ -42,57 +41,73 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 2. جلب البيانات (Pioneers + Feedbacks)
     const rawPioneers = await redis.lrange('pioneers', 0, -1);
     const rawFeedbacks = await redis.lrange('feedbacks', 0, -1);
 
-    // معالجة بيانات الرواد (منع التكرار وحساب المرات)
     const pioneerMap = new Map();
     rawPioneers.forEach((item: any) => {
       try {
         const p = typeof item === 'string' ? JSON.parse(item) : item;
-        const key = p.username || p.wallet;
-        if (pioneerMap.has(key)) {
-          const existing = pioneerMap.get(key);
-          existing.count += 1;
-          if (new Date(p.timestamp) > new Date(existing.timestamp)) {
-            existing.timestamp = p.timestamp; // تحديث لآخر ظهور
-          }
+        const username = p.username || 'Anonymous';
+        
+        if (!pioneerMap.has(username)) {
+          pioneerMap.set(username, {
+            username: username,
+            wallet: p.wallet,
+            timestamps: [p.timestamp],
+            count: 1
+          });
         } else {
-          pioneerMap.set(key, { ...p, count: 1 });
+          const existing = pioneerMap.get(username);
+          existing.count += 1;
+          existing.timestamps.push(p.timestamp);
+          
+          // ✅ الأولوية: إذا كان العنوان الجديد يبدأ بـ G والقديم لا، نحدثه
+          if (p.wallet?.startsWith('G') && !existing.wallet?.startsWith('G')) {
+            existing.wallet = p.wallet;
+          }
+          
+          // الحفاظ على ترتيب التواريخ (الأحدث أولاً)
+          existing.timestamps.sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
         }
       } catch (e) {}
     });
 
-    const allPioneers = Array.from(pioneerMap.values()).sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    const allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => 
+      new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime()
     );
 
-    // معالجة التعليقات
     const feedbacks = rawFeedbacks.map((f: any) => typeof f === 'string' ? JSON.parse(f) : f);
 
-    // 3. نظام الصفحات (Pagination)
     const totalItems = allPioneers.length;
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const paginatedPioneers = allPioneers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-    const rows = paginatedPioneers.map((u: any) => `
+    const rows = paginatedPioneers.map((u: any) => {
+      // إعداد قائمة بالتواريخ السابقة لإظهارها عند الحاجة
+      const historyTooltip = u.timestamps.slice(1, 5).map((t: any) => new Date(t).toLocaleString()).join('\\n');
+      
+      return `
       <tr>
         <td class="user-cell">
-            ${u.username || 'Anonymous'} 
-            <span class="visit-badge">${u.count}x Visits</span>
+            <div class="user-info">
+              <span class="name">${u.username}</span>
+              <span class="visit-badge" title="History:\\n${historyTooltip || 'No previous visits'}">${u.count}x Visits</span>
+            </div>
         </td>
         <td class="wallet-cell">
           <span class="status-dot ${u.wallet?.startsWith('G') ? 'active' : 'inactive'}"></span>
           <code>${u.wallet || 'N/A'}</code>
         </td>
-        <td class="date-cell">${new Date(u.timestamp).toLocaleString()}</td>
+        <td class="date-cell">
+          <div class="last-seen">Last: ${new Date(u.timestamps[0]).toLocaleString()}</div>
+          ${u.count > 1 ? `<div class="first-seen">First: ${new Date(u.timestamps[u.timestamps.length - 1]).toLocaleDateString()}</div>` : ''}
+        </td>
       </tr>
-    `).join('');
+    `}).join('');
 
-    // صفوف التعليقات
-    const feedbackRows = feedbacks.slice(0, 10).map((f: any) => `
+    const feedbackRows = feedbacks.slice(0, 15).map((f: any) => `
       <div class="feedback-item">
         <strong>@${f.username}:</strong> <span>${f.text}</span>
         <div style="font-size: 10px; color: #94a3b8; margin-top: 5px;">${new Date(f.timestamp).toLocaleString()}</div>
@@ -108,68 +123,77 @@ export default async function handler(req: any, res: any) {
         <style>
           :root { --bg: #f8fafc; --primary: #0f172a; --accent: #38bdf8; --border: #e2e8f0; }
           body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-          .container { max-width: 1200px; margin: 0 auto; }
+          .container { max-width: 1240px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 20px; border-radius: 12px; color: white; }
           
-          .grid-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+          .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
           
           .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-          .stat-card { background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border); }
+          .stat-card { background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
           .stat-label { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; }
           .stat-value { font-size: 20px; font-weight: 800; }
 
-          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
           table { width: 100%; border-collapse: collapse; }
-          th { background: #f1f5f9; padding: 12px 20px; text-align: left; font-size: 12px; color: #475569; }
-          td { padding: 12px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+          th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+          td { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; vertical-align: middle; }
           
-          .visit-badge { background: #f1f5f9; color: #6366f1; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 800; margin-left: 8px; }
-          .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; height: fit-content; }
-          .feedback-item { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+          .user-info { display: flex; flex-direction: column; gap: 4px; }
+          .user-info .name { font-weight: 700; color: var(--primary); }
           
-          .pagination { margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
-          .pg-btn { padding: 8px 16px; background: white; border: 1px solid var(--border); border-radius: 6px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; }
-          .pg-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+          .visit-badge { display: inline-block; width: fit-content; background: #eef2ff; color: #6366f1; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: help; }
           
-          .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
-          .active { background: #10b981; } .inactive { background: #ef4444; }
-          code { font-family: monospace; color: #475569; background: #f1f5f9; padding: 2px 5px; border-radius: 4px; }
+          .date-cell .last-seen { font-weight: 600; color: #1e293b; }
+          .date-cell .first-seen { font-size: 10px; color: #94a3b8; }
+
+          .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; height: 80vh; overflow-y: auto; position: sticky; top: 20px; }
+          .feedback-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; line-height: 1.5; }
+          
+          .pagination { margin-top: 25px; display: flex; gap: 8px; align-items: center; justify-content: center; }
+          .pg-btn { padding: 10px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; transition: 0.2s; }
+          .pg-btn:hover { border-color: var(--accent); color: var(--accent); }
+          .pg-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+          
+          .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
+          .active { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.4); } 
+          .inactive { background: #ef4444; }
+          code { font-family: 'JetBrains Mono', monospace; color: #475569; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
         </style>
       </head>
       <body>
         <div class="container">
           <header class="header">
-            <h1 style="margin:0; font-size: 18px;">🚀 Pioneer Live Console</h1>
-            <div style="font-size: 12px;">Total Pioneers: ${totalItems}</div>
+            <h1 style="margin:0; font-size: 20px; letter-spacing: -0.5px;">🛡️ Reputa Admin Console</h1>
+            <div style="font-size: 12px; opacity: 0.8;">Monitoring ${totalItems} Pioneers</div>
           </header>
 
           <div class="grid-layout">
             <div class="main-content">
               <div class="stats-grid">
-                <div class="stat-card"><div class="stat-label">Unique Users</div><div class="stat-value">${totalItems}</div></div>
-                <div class="stat-card"><div class="stat-label">Verified (G)</div><div class="stat-value" style="color:#10b981">${allPioneers.filter(u => u.wallet?.startsWith('G')).length}</div></div>
-                <div class="stat-card"><div class="stat-label">Feedbacks</div><div class="stat-value" style="color:#6366f1">${feedbacks.length}</div></div>
+                <div class="stat-card"><div class="stat-label">Unique Pioneers</div><div class="stat-value">${totalItems}</div></div>
+                <div class="stat-card"><div class="stat-label">Verified Wallet Access</div><div class="stat-value" style="color:#10b981">${allPioneers.filter((u:any) => u.wallet?.startsWith('G')).length}</div></div>
+                <div class="stat-card"><div class="stat-label">Feedback Received</div><div class="stat-value" style="color:#6366f1">${feedbacks.length}</div></div>
               </div>
 
               <div class="table-wrapper">
                 <table>
                   <thead>
-                    <tr><th>User & Activity</th><th>Wallet</th><th>Last Seen</th></tr>
+                    <tr><th>Pioneer & Activity</th><th>Wallet Identity</th><th>Visit Timeline</th></tr>
                   </thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
 
               <div class="pagination">
-                ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">Previous</a>` : ''}
+                ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">← Previous</a>` : ''}
                 <span class="pg-btn active">Page ${currentPage} of ${totalPages}</span>
-                ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next</a>` : ''}
+                ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next →</a>` : ''}
               </div>
             </div>
 
             <div class="feedback-panel">
-              <h3 style="margin-top:0; font-size: 14px; text-transform: uppercase; color: #64748b;">Latest Feedback</h3>
-              ${feedbackRows || '<p style="color:#94a3b8; font-size:12px;">No feedback yet.</p>'}
+              <h3 style="margin-top:0; font-size: 14px; text-transform: uppercase; color: #64748b; letter-spacing: 0.1em; border-bottom: 2px solid var(--accent); padding-bottom: 10px;">Pioneer Voice</h3>
+              ${feedbackRows || '<p style="color:#94a3b8; font-size:12px; padding:20px 0;">No suggestions recorded yet.</p>'}
             </div>
           </div>
         </div>
@@ -177,6 +201,6 @@ export default async function handler(req: any, res: any) {
       </html>
     `);
   } catch (error: any) {
-    return res.status(500).send("Error: " + error.message);
+    return res.status(500).send("Critical Console Error: " + error.message);
   }
 }

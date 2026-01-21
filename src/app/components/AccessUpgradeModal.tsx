@@ -77,17 +77,14 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 opacity-80">
-              <h3 className="font-semibold text-gray-700 text-sm mb-3">Free Explorer</h3>
-              <ul className="space-y-2 text-xs text-gray-600">
-                <li className="flex items-center gap-2"><Check className="w-3 h-3"/> Basic Score</li>
-                <li className="flex items-center gap-2"><Check className="w-3 h-3"/> Public Metrics</li>
-              </ul>
-            </div>
-
-            <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
-              <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
-              <ul className="space-y-2 text-xs text-gray-700">
-                <li className="flex items-center gap-2"><Check className="w-3 h-3 text-cyan-600"/> AI Beha
+      <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
+  <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
+  <ul className="space-y-2 text-xs text-gray-700">
+    <li className="flex items-center gap-2">
+      <Check className="w-3 h-3 text-cyan-600" /> AI Behavior Analysis
+    </li>
+    <li className="flex items-center gap-2">
+      <Check className="w-3 h-3 text-cyan-600" /> Risk Heatmaps
+    </li>
+  </ul>
+</div>

@@ -1,14 +1,14 @@
-import { Sparkles, Lock, Check } from 'lucide-react';  
-import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
-import { createVIPPayment } from '../services/piPayments';
 import { useState } from 'react';
+import { Sparkles, Check } from 'lucide-react';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade: () => void;
-  currentUser?: any; 
+  currentUser?: any;
 }
 
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
@@ -18,33 +18,31 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
     e.preventDefault();
     e.stopPropagation();
 
-    // ---- Demo Mode: VIP opens directly ----
-    if (!currentUser || currentUser.uid === "demo") {
-      alert("⚡ Demo Mode: VIP unlocked for testing!");
+    // ---- Demo Mode ----
+    if (!currentUser || currentUser.uid === 'demo') {
+      alert('⚡ Demo Mode: VIP unlocked!');
       onUpgrade();
       onClose();
       return;
     }
 
-    // ---- Real Mode ----
     if (!window.Pi) {
-      alert("❌ Please open this app in Pi Browser");
+      alert('❌ Please open this app in Pi Browser');
       return;
     }
 
-    if (isProcessing) return; // منع الضغط المتكرر
+    if (isProcessing) return;
     setIsProcessing(true);
 
     try {
       await createVIPPayment(currentUser.uid, () => {
-        // ✅ VIP فقط بعد إتمام الدفع
         onUpgrade();
         onClose();
-        alert("✅ VIP Unlocked!");
+        alert('✅ VIP Unlocked!');
       });
     } catch (err) {
       console.error(err);
-      alert("❌ Payment failed. Try again.");
+      alert('❌ Payment failed. Try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -71,7 +69,6 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
                 <li className="flex items-center gap-2"><Check className="w-3 h-3"/> Public Metrics</li>
               </ul>
             </div>
-
             <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
               <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
               <ul className="space-y-2 text-xs text-gray-700">
@@ -89,14 +86,12 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
               <span className="text-xl font-bold text-purple-600">π</span>
             </div>
           </div>
-          
-          <Button 
+
+          <Button
             type="button"
             onClick={handlePayment}
             disabled={isProcessing}
-            className={`w-full h-14 ${
-              isProcessing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-700'
-            } text-white rounded-xl shadow-lg font-black uppercase`}
+            className={`w-full h-14 ${isProcessing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-700'} text-white rounded-xl shadow-lg font-black uppercase`}
           >
             <Sparkles className="w-5 h-5 mr-2" />
             {isProcessing ? 'Processing...' : 'Unlock Now'}

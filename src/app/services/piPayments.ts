@@ -1,73 +1,74 @@
-
-/**
- * ⚠️ DISABLED
- * Pi payment must be called directly from UI component
- * This service is intentionally disabled
- */
-
-export function createPiPayment() {
-  throw new Error(
-    "Pi Payment service disabled. Use Pi.createPayment directly in component."
-  );
+declare global {
+  interface Window {
+    Pi: any;
+  }
 }
 
-
-export const createVIPPayment = async (uid: string, onSuccess: () => void) => {
-  // 1. فحص وجود Pi في النافذة
-  const Pi = (window as any).Pi;
-  
-  if (!Pi) {
-    alert("Please open this app inside Pi Browser");
+export async function createVIPPayment(
+  uid: string,
+  onSuccess: () => void
+) {
+  if (!window.Pi) {
+    alert("❌ Please open this app in Pi Browser");
     return;
   }
 
-  console.log("Starting payment for UID:", uid);
-
   try {
-    // 2. استدعاء الدفع مع معالجة الأخطاء المباشرة
-    await Pi.createPayment({
-      amount: 1,
-      memo: "Unlock VIP Insights - Reputa Score",
-      metadata: { uid }
-    }, {
-      onReadyForServerApproval: async (paymentId: string) => {
-        console.log("Server Approval Step:", paymentId);
-        try {
-          const res = await fetch('/api/pi-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, action: 'approve', uid })
-          });
-          if (!res.ok) throw new Error("Approval failed");
-        } catch (err) {
-          console.error("Approval fetch error:", err);
-        }
-      },
-      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-        console.log("Server Completion Step:", txid);
-        try {
-          const res = await fetch('/api/pi-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid, action: 'complete', uid })
-          });
-          if (res.ok) {
-            onSuccess();
-          }
-        } catch (err) {
-          console.error("Completion fetch error:", err);
-        }
-      },
-      onCancel: (paymentId: string) => {
-        console.log("Payment cancelled by user", paymentId);
-      },
-      onError: (error: Error) => {
-        console.error("SDK Error details:", error);
-        alert("Payment Error: " + error.message);
-      }
+    // 1️⃣ نطلب من السيرفر معلومات الدفع
+    const res = await fetch('/api/pi/create-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid }),
     });
-  } catch (e) {
-    console.error("Global Payment Error:", e);
-    alert("Could not initiate payment. Try restarting Pi Browser.");
+
+    if (!res.ok) throw new Error("Failed to create payment");
+
+    const payment = await res.json();
+
+    // 2️⃣ إنشاء الدفع داخل Pi Browser
+    await window.Pi.createPayment(
+      {
+        amount: payment.amount, // 1 Pi (testnet)
+        memo: "Reputa Score VIP Access",
+        metadata: {
+          uid,
+          plan: "vip",
+        },
+      },
+      {
+        onReadyForServerApproval: async (paymentId: string) => {
+          await fetch('/api/pi/approve-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId }),
+          });
+        },
+
+        onReadyForServerCompletion: async (
+          paymentId: string,
+          txid: string
+        ) => {
+          await fetch('/api/pi/complete-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid, uid }),
+          });
+
+          onSuccess();
+        },
+
+        onCancel: () => {
+          alert("❌ Payment cancelled");
+        },
+
+        onError: (error: any) => {
+          console.error("Pi Payment Error:", error);
+          alert("❌ Payment failed");
+        },
+      }
+    );
+  } catch (err) {
+    console.error(err);
+    alert("❌ Could not start Pi payment");
   }
-};
+}

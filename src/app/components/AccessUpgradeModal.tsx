@@ -1,6 +1,6 @@
 import { Sparkles, Lock, Check } from 'lucide-react';  
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
@@ -77,14 +77,24 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
           </DialogDescription>
         </DialogHeader>
 
-      <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
-  <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
-  <ul className="space-y-2 text-xs text-gray-700">
-    <li className="flex items-center gap-2">
-      <Check className="w-3 h-3 text-cyan-600" /> AI Behavior Analysis
-    </li>
-    <li className="flex items-center gap-2">
-      <Check className="w-3 h-3 text-cyan-600" /> Risk Heatmaps
-    </li>
-  </ul>
-</div>
+        <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200 mt-4 mx-6">
+          <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
+          <ul className="space-y-2 text-xs text-gray-700">
+            <li className="flex items-center gap-2">
+              <Check className="w-3 h-3 text-cyan-600" /> AI Behavior Analysis
+            </li>
+            <li className="flex items-center gap-2">
+              <Check className="w-3 h-3 text-cyan-600" /> Risk Heatmaps
+            </li>
+          </ul>
+        </div>
+
+        <DialogFooter className="p-6">
+          <Button onClick={handlePayment} className="w-full flex items-center justify-center gap-2">
+            <Sparkles className="w-4 h-4" /> Upgrade to VIP
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

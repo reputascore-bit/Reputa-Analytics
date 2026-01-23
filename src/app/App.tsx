@@ -28,10 +28,12 @@ function FeedbackSection({ username }: { username: string }) {
         }),
       });
       if (res.ok) {
-        setFeedback('');
-        setStatus('✅ THANK YOU, PIONEER!');
-        setTimeout(() => setStatus(''), 3000);
-      }
+      alert("✅ Transaction Sent!");
+    } else {
+      const errorData = await res.json();
+      // سيظهر لك الآن السبب التقني الدقيق (مثلاً: "invalid_seed" أو "insufficient_balance")
+      alert("❌ Error: " + (errorData.error || "Unknown error"));
+    }
     } catch (e) {
       setStatus('❌ ERROR');
       setTimeout(() => setStatus(''), 2000);

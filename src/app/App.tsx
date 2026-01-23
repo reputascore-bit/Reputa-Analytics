@@ -18,15 +18,15 @@ function FeedbackSection({ username }: { username: string }) {
     if (!feedback.trim()) return;
     setStatus('SENDING...');
     try {
-      const res = await fetch('/api/save-feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username,
-          text: feedback,
-          timestamp: new Date().toISOString()
-        }),
-      });
+     const res = await fetch('/api/send-pi', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    toAddress: payoutTarget, 
+    amount: 0.01,
+    recipientUid: currentUser.uid // هذا هو المعرف الذي يطلبه نظام باي
+  }),
+});
       if (res.ok) {
       alert("✅ Transaction Sent!");
     } else {

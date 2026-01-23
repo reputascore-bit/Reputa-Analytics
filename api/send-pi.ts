@@ -37,16 +37,14 @@ export default async function handler(req: any, res: any) {
 
     const responseData = await response.json(); // محاولة قراءة الاستجابة كـ JSON
 
-    if (response.ok) {
+   if (response.ok) {
         await redis.incr('total_app_transactions');
-        return res.status(200).json({ success: true, data: responseData });
+        return res.status(200).json({ success: true });
     } else {
-        // إرسال الخطأ التفصيلي من Pi API إلى الفرونت إند
-        console.error("Pi API Error Details:", responseData);
-        return res.status(400).json({ 
-          error: responseData.message || "Pi Network rejected the transaction",
-          details: responseData 
-        });
+        const errorText = await response.text();
+        console.error("Full Pi API Error:", errorText);
+        // سنرسل الخطأ كاملاً للواجهة لنراه في الـ Alert
+        return res.status(400).json({ error: errorText });
     }
 
   } catch (error: any) {

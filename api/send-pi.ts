@@ -11,10 +11,11 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
-    const { toAddress, amount } = req.body;
+    // أضفنا recipientUid لكي نأخذه من واجهة التطبيق
+    const { toAddress, amount, recipientUid } = req.body;
 
-    if (!toAddress || !amount) {
-      return res.status(400).json({ error: "Missing data" });
+    if (!toAddress || !amount || !recipientUid) {
+      return res.status(400).json({ error: "Missing data: address, amount, or recipientUid" });
     }
 
     const response = await fetch(`https://api.minepi.com/v2/payments`, {
@@ -28,13 +29,13 @@ export default async function handler(req: any, res: any) {
           amount: parseFloat(amount),
           memo: "Mainnet Checklist Transaction",
           metadata: { type: "app_payout" },
-          uid: "payout-" + Date.now(),
+          uid: recipientUid, // تم التعديل: نستخدم الـ UID الحقيقي للمستلم المسجل في باي
           recipient_address: toAddress
         }
       })
     });
 
-    // تصحيح الخطأ: نقرأ الجسم مرة واحدة فقط
+    // قراءة البيانات مرة واحدة لتجنب خطأ Body is unusable
     const responseData = await response.json();
 
     if (response.ok) {
@@ -42,15 +43,15 @@ export default async function handler(req: any, res: any) {
         return res.status(200).json({ success: true, data: responseData });
     } else {
         console.error("Pi API Error Detail:", responseData);
-        // نعيد الخطأ القادم من Pi Network كما هو لنراه في المتصفح
-        return res.status(responseData.status || 400).json({ 
-          error: responseData.message || "Transaction Rejected",
-          fullError: responseData 
+        // نعيد تفاصيل الخطأ بدقة لنعرف سبب الرفض (مثلاً رصيد غير كافٍ)
+        return res.status(400).json({ 
+          error: responseData.error_message || responseData.message || "Transaction Rejected",
+          code: responseData.error || "unknown_error"
         });
     }
 
   } catch (error: any) {
-    console.error("Server Crash Fix:", error.message);
-    return res.status(500).json({ error: "Server Internal Error", message: error.message });
+    console.error("Server Error:", error.message);
+    return res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 }

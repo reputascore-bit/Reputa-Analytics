@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection (بدون تغيير في الروح مع تحسين التباعد) ---
+// --- مكون FeedbackSection (احترافية التباعد مع الحفاظ على الروح) ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -80,26 +80,24 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
-    // إصلاح Demo جذرياً: التأكد من كسر حالة التحميل فوراً
-    if (address.toLowerCase().trim() === 'demo') {
-      setIsLoading(true);
-      // استخدام تزامني بسيط لضمان تحديث الـ State
-      const demoData = {
-        address: "GDU22WEH7M3O...DEMO",
-        username: "Demo_Pioneer",
-        reputaScore: 632,
-        trustLevel: "Elite",
-        transactions: []
-      };
-      
+    const isDemo = address.toLowerCase().trim() === 'demo';
+    setIsLoading(true);
+
+    // تحسين منطق الديمو ليكون فورياً وقاطعاً
+    if (isDemo) {
       setTimeout(() => {
-        setWalletData(demoData);
+        setWalletData({
+          address: "GDU22WEH7M3O...DEMO",
+          username: "Demo_Pioneer",
+          reputaScore: 632,
+          trustLevel: "Elite",
+          transactions: []
+        });
         setIsLoading(false);
       }, 400); 
       return;
     }
 
-    setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
       if (data) {
@@ -122,7 +120,7 @@ function ReputaAppContent() {
     );
   }
 
-  // منطق الفتح الذكي: الديمو يفتح التقرير دائماً
+  // قاعدة Unlocking الصارمة: الديمو يفتح التقرير دائماً
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
@@ -158,7 +156,7 @@ function ReputaAppContent() {
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
              
-             <div className="relative group">
+             <div className="relative overflow-hidden rounded-[40px]">
                 <WalletAnalysis 
                   walletData={walletData} 
                   isProUser={isUnlocked} 
@@ -166,30 +164,26 @@ function ReputaAppContent() {
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
 
-                {/* طبقة القفل الاحترافية: تشغل مساحة أقل (35%) مع تلاشي ناعم جداً */}
+                {/* طبقة القفل الذكية (Smart Overlay): احترافية وبمساحة رؤية مثالية */}
                 {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[38%] z-20 rounded-b-[40px] overflow-hidden">
-                    {/* خلفية متدرجة تعطي إيحاء بالغموض وليس الانغلاق التام */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[8px]" />
+                  <div className="absolute inset-x-0 bottom-0 h-[35%] z-20 flex flex-col items-center justify-end">
+                    {/* التدرج والتمويه (Glassmorphism Effect) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
                     
-                    <div className="relative h-full flex flex-col items-center justify-center p-6 text-center">
-                      <div className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-3 border border-purple-50 ring-4 ring-purple-50/50 animate-pulse">
+                    <div className="relative pb-10 px-6 text-center w-full">
+                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-purple-100 mb-3 animate-bounce">
                         <Lock className="w-5 h-5 text-purple-600" />
                       </div>
                       
-                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-[0.2em]">Detailed Audit Locked</h3>
+                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
+                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Testnet Transaction</p>
                       
                       <button 
                         onClick={() => setIsUpgradeModalOpen(true)}
-                        className="mt-4 px-8 py-3 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all active:scale-95"
+                        className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
                       >
                         Unlock Full Report
                       </button>
-                      
-                      <div className="mt-3 flex items-center gap-2 opacity-60">
-                         <div className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
-                         <span className="text-[7px] font-black text-gray-500 uppercase">1 Testnet Pi Required</span>
-                      </div>
                     </div>
                   </div>
                 )}

@@ -17,7 +17,6 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Missing data" });
     }
 
-    // استدعاء API منصة باي
     const response = await fetch(`https://api.minepi.com/v2/payments`, {
       method: 'POST',
       headers: {
@@ -29,26 +28,29 @@ export default async function handler(req: any, res: any) {
           amount: parseFloat(amount),
           memo: "Mainnet Checklist Transaction",
           metadata: { type: "app_payout" },
-          uid: "admin-payout-" + Date.now(), // استخدام معرف فريد لكل عملية
-          recipient_address: toAddress // التأكد من تحديد المستلم بشكل صحيح
+          uid: "payout-" + Date.now(),
+          recipient_address: toAddress
         }
       })
     });
 
-    const responseData = await response.json(); // محاولة قراءة الاستجابة كـ JSON
+    // تصحيح الخطأ: نقرأ الجسم مرة واحدة فقط
+    const responseData = await response.json();
 
-   if (response.ok) {
+    if (response.ok) {
         await redis.incr('total_app_transactions');
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, data: responseData });
     } else {
-        const errorText = await response.text();
-        console.error("Full Pi API Error:", errorText);
-        // سنرسل الخطأ كاملاً للواجهة لنراه في الـ Alert
-        return res.status(400).json({ error: errorText });
+        console.error("Pi API Error Detail:", responseData);
+        // نعيد الخطأ القادم من Pi Network كما هو لنراه في المتصفح
+        return res.status(responseData.status || 400).json({ 
+          error: responseData.message || "Transaction Rejected",
+          fullError: responseData 
+        });
     }
 
   } catch (error: any) {
-    console.error("Server Crash Error:", error);
-    return res.status(500).json({ error: "Server Error", message: error.message });
+    console.error("Server Crash Fix:", error.message);
+    return res.status(500).json({ error: "Server Internal Error", message: error.message });
   }
 }

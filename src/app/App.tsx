@@ -18,22 +18,20 @@ function FeedbackSection({ username }: { username: string }) {
     if (!feedback.trim()) return;
     setStatus('SENDING...');
     try {
-     const res = await fetch('/api/send-pi', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ 
-    toAddress: payoutTarget, 
-    amount: 0.01,
-    recipientUid: currentUser.uid // هذا هو المعرف الذي يطلبه نظام باي
-  }),
-});
+      const res = await fetch('/api/save-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          text: feedback,
+          timestamp: new Date().toISOString()
+        }),
+      });
       if (res.ok) {
-      alert("✅ Transaction Sent!");
-    } else {
-      const errorData = await res.json();
-      // سيظهر لك الآن السبب التقني الدقيق (مثلاً: "invalid_seed" أو "insufficient_balance")
-      alert("❌ Error: " + (errorData.error || "Unknown error"));
-    }
+        setFeedback('');
+        setStatus('✅ THANK YOU!');
+        setTimeout(() => setStatus(''), 3000);
+      }
     } catch (e) {
       setStatus('❌ ERROR');
       setTimeout(() => setStatus(''), 2000);
@@ -70,7 +68,6 @@ function ReputaAppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   
-  // حالات جديدة لإرسال العملات من محفظة التطبيق
   const [payoutTarget, setPayoutTarget] = useState('');
   const [isSendingPayout, setIsSendingPayout] = useState(false);
 
@@ -121,6 +118,7 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
+    // --- إرجاع ميزة الـ DEMO ---
     if (address === 'demo') {
       setIsLoading(true);
       setTimeout(() => {
@@ -155,21 +153,28 @@ function ReputaAppContent() {
     }
   };
 
-  // دالة إرسال العملات من محفظة التطبيق (الخلفية)
   const handleAppPayout = async () => {
-    if (!payoutTarget) return;
+    if (!payoutTarget || !currentUser?.uid) {
+      alert("Error: Receiver UID not found.");
+      return;
+    }
     setIsSendingPayout(true);
     try {
       const res = await fetch('/api/send-pi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toAddress: payoutTarget, amount: 0.01 }),
+        body: JSON.stringify({ 
+          toAddress: payoutTarget, 
+          amount: 0.01,
+          recipientUid: currentUser.uid // استخدام الـ UID الحقيقي للمستلم
+        }),
       });
+      const data = await res.json();
       if (res.ok) {
-        alert("✅ Transaction Sent Successfully from App Wallet!");
+        alert("✅ Transaction Sent Successfully!");
         setPayoutTarget('');
       } else {
-        alert("❌ Failed to send. Make sure App Wallet is funded.");
+        alert("❌ Error: " + (data.details?.message || data.error));
       }
     } catch (e) {
       alert("❌ Connection Error");
@@ -216,7 +221,7 @@ function ReputaAppContent() {
           <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
             
-            {/* قسم إرسال المعاملات للمطور فقط لإتمام شروط المينيت */}
+            {/* قسم إرسال المعاملات للمطور (يظهر فقط لك) */}
             {currentUser?.uid && currentUser.uid !== "demo" && (
               <div className="mt-8 p-6 bg-orange-50/50 rounded-3xl border border-dashed border-orange-200">
                 <div className="flex items-center gap-2 mb-4">
@@ -236,7 +241,6 @@ function ReputaAppContent() {
                 >
                   {isSendingPayout ? "Processing..." : "Send 0.01 Pi from App Wallet"}
                 </button>
-                <p className="mt-2 text-[8px] text-orange-400 text-center font-bold">ONLY YOU SEE THIS TO COMPLETE 10 TRANSFERS</p>
               </div>
             )}
 

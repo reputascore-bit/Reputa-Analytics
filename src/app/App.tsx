@@ -98,8 +98,8 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
-    // إصلاح وضع الديمو (Demo Fix)
-    if (address.toLowerCase() === 'demo') {
+    // --- إصلاح وضع DEMO بشكل نهائي ليعمل فوراً ويفتح التقرير ---
+    if (address.toLowerCase().trim() === 'demo') {
       setIsLoading(true);
       setTimeout(() => {
         setWalletData({
@@ -177,55 +177,60 @@ function ReputaAppContent() {
              {/* القسم العلوي: الهوية والسكور (يظهر دائماً) */}
              <WalletAnalysis 
                 walletData={walletData} 
-                isProUser={true} // نجعله true هنا ليظهر التصميم العلوي دائماً
+                isProUser={true} 
                 onReset={() => setWalletData(null)} 
                 onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
              />
 
-             {/* قسم التقرير المتقدم المقفل (Professional Audit Report) */}
-             <div className="relative max-w-2xl mx-auto">
-                {(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") && (
-                  <div className="absolute inset-0 z-20 backdrop-blur-md bg-white/40 rounded-[40px] border border-white/50 flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
-                    <div className="w-14 h-14 bg-white/80 rounded-2xl shadow-xl flex items-center justify-center mb-5 border border-purple-100">
-                      <Lock className="w-6 h-6 text-purple-600 animate-pulse" />
+             {/* قسم التقرير المتقدم المقفل بالكامل (Professional Audit Report) */}
+             <div className="relative max-w-2xl mx-auto overflow-hidden rounded-[40px]">
+                {/* طبقة القفل: تظهر فقط إذا لم يكن VIP ولم يكمل عملية دفع واحدة، وتستثني الديمو */}
+                {(!isVip && paymentCount < 1 && walletData.username !== "Demo_Pioneer") && (
+                  <div className="absolute inset-0 z-20 backdrop-blur-[15px] bg-white/60 flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-purple-200 rounded-[40px]">
+                    <div className="w-16 h-16 bg-white rounded-3xl shadow-xl flex items-center justify-center mb-6 border border-purple-100 ring-4 ring-purple-50">
+                      <Lock className="w-7 h-7 text-purple-600" />
                     </div>
-                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Audit Locked</h3>
-                    <p className="text-[10px] text-gray-500 mt-3 max-w-[220px] leading-relaxed font-medium">
-                      Complete <span className="text-purple-600 font-bold">2 Testnet transactions</span> to verify your identity and unlock the full report.
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-[0.2em]">Audit Report Locked</h3>
+                    <p className="text-[10px] text-gray-500 mt-4 max-w-[240px] leading-relaxed font-bold uppercase">
+                      To unlock full behavioral analysis, complete <span className="text-purple-600">1 Testnet transaction</span> to verify your wallet identity.
                     </p>
-                    
-                    {/* عداد العمليات الصغير */}
-                    <div className="flex gap-2 mt-5">
-                      {[1, 2].map(i => (
-                        <div key={i} className={`w-10 h-1.5 rounded-full transition-colors duration-500 ${paymentCount >= i ? 'bg-green-500' : 'bg-gray-200'}`} />
-                      ))}
-                    </div>
 
                     <button 
                       onClick={() => setIsUpgradeModalOpen(true)}
-                      className="mt-6 px-10 py-3 bg-purple-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-purple-200 hover:scale-105 active:scale-95 transition-all"
+                      className="mt-8 px-12 py-4 bg-purple-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-xl shadow-purple-200 hover:scale-105 active:scale-95 transition-all"
                     >
-                      Unlock VIP Report
+                      Unlock VIP Analysis
                     </button>
-                    <p className="mt-4 text-[7px] text-orange-400 font-black uppercase tracking-[0.2em]">⚠️ Developer Mode: Testnet Only</p>
+                    
+                    <div className="mt-6 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                      <p className="text-[8px] text-orange-500 font-black uppercase tracking-widest">Testnet Payment Required</p>
+                    </div>
                   </div>
                 )}
 
-                {/* صورة طبق الأصل من التقرير ليظهر خلف الـ Blur كما في طلبك */}
-                <div className={`transition-all duration-700 ${(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
-                   <div className="p-8 bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
-                      <div className="flex justify-between items-center mb-8">
-                        <div className="flex items-center gap-3">
-                          <ShieldCheck className="w-5 h-5 text-purple-600" />
-                          <h2 className="text-lg font-black text-gray-800 tracking-tight">Professional Audit Report</h2>
-                        </div>
-                        <span className="text-[8px] font-black px-3 py-1 bg-purple-50 text-purple-600 rounded-full uppercase border border-purple-100">Reputa Certified</span>
+                {/* المحتوى الفعلي للتقرير: يختفي تماماً خلف الـ Blur */}
+                <div className={`p-8 bg-white border border-gray-100 shadow-sm transition-all duration-1000 ${(!isVip && paymentCount < 1 && walletData.username !== "Demo_Pioneer") ? 'opacity-10 grayscale pointer-events-none' : 'opacity-100'}`}>
+                   <div className="flex justify-between items-center mb-8">
+                      <div className="flex items-center gap-3">
+                        <ShieldCheck className="w-6 h-6 text-purple-600" />
+                        <h2 className="text-lg font-black text-gray-800 tracking-tight uppercase">Professional Audit Report</h2>
                       </div>
-                      
-                      {/* هيكل البيانات (سيملأه مكون WalletAnalysis داخلياً) */}
-                      <div className="space-y-6">
+                      <span className="text-[8px] font-black px-4 py-1.5 bg-green-50 text-green-600 rounded-full uppercase border border-green-100">Verified System</span>
+                   </div>
+                   
+                   {/* هيكل البيانات الافتراضي للتقرير */}
+                   <div className="space-y-8">
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase"><span>Balance Stability</span><span>Good</span></div>
                         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-purple-500 w-[80%]"></div></div>
-                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-[60%]"></div></div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase"><span>Network Activity</span><span>High</span></div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-[65%]"></div></div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-[9px] font-black text-gray-400 uppercase"><span>Account Security</span><span>Verified</span></div>
                         <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-green-500 w-[100%]"></div></div>
                       </div>
                    </div>

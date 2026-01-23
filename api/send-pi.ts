@@ -44,7 +44,13 @@ export default async function handler(req: any, res: any) {
     }
 
     if (response.ok) {
+      // --- الإضافة المطلوبة لربط نظام القفل ---
+      // زيادة عداد المعاملات الخاص بالمستخدم المستلم لفتح التقرير
+      await redis.incr(`tx_count:${recipientUid}`);
+      
+      // زيادة العداد الإجمالي للتطبيق
       await redis.incr('total_app_transactions');
+      
       return res.status(200).json({ success: true, data: responseData });
     } else {
       // إرسال تفاصيل الخطأ مباشرة للمتصفح ليظهر في الـ Alert

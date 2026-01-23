@@ -1,9 +1,3 @@
-declare global {
-  interface Window {
-    Pi: any;
-  }
-}
-
 export async function createVIPPayment(
   uid: string,
   onSuccess: () => void
@@ -21,14 +15,18 @@ export async function createVIPPayment(
       body: JSON.stringify({ uid }),
     });
 
-    if (!res.ok) throw new Error("Failed to create payment");
+    // إذا فشل السيرفر في الرد، سنعرف السبب هنا
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Server Error: ${res.status} - ${JSON.stringify(errorData)}`);
+    }
 
     const payment = await res.json();
 
     // 2️⃣ إنشاء الدفع داخل Pi Browser
     await window.Pi.createPayment(
       {
-        amount: payment.amount, // 1 Pi (testnet)
+        amount: payment.amount, 
         memo: "Reputa Score VIP Access",
         metadata: {
           uid,
@@ -53,7 +51,6 @@ export async function createVIPPayment(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid, uid }),
           });
-
           onSuccess();
         },
 
@@ -63,12 +60,14 @@ export async function createVIPPayment(
 
         onError: (error: any) => {
           console.error("Pi Payment Error:", error);
-          alert("❌ Payment failed");
+          // تعديل: إظهار تفاصيل خطأ الـ SDK
+          alert("❌ SDK Error: " + JSON.stringify(error));
         },
       }
     );
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    alert("❌ Could not start Pi payment");
+    // تعديل: إظهار الخطأ الحقيقي بدلاً من رسالة ثابتة
+    alert("❌ Error Detail: " + err.message);
   }
 }

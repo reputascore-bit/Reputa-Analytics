@@ -166,7 +166,7 @@ function ReputaAppContent() {
 
                 {/* طبقة القفل الذكية (Smart Overlay): احترافية وبمساحة رؤية مثالية */}
                 {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[35%] z-20 flex flex-col items-center justify-end">
+                  <div className="absolute inset-x-0 bottom-0 h-[40%] z-20 flex flex-col items-center justify-end">
                     {/* التدرج والتمويه (Glassmorphism Effect) */}
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
                     

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';  
+import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, CheckCircle2 } from 'lucide-react';
+import { Send, MessageSquare, Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -67,7 +67,7 @@ function ReputaAppContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
-  const [paymentCount, setPaymentCount] = useState(0); // عداد عمليات الدفع
+  const [paymentCount, setPaymentCount] = useState(0);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
@@ -84,7 +84,6 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          // جلب حالة الـ VIP وعدد العمليات من السيرفر
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
@@ -99,8 +98,8 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
-    // --- إرجاع بيانات الـ DEMO الأصلية ---
-    if (address === 'demo') {
+    // إصلاح وضع الديمو (Demo Fix)
+    if (address.toLowerCase() === 'demo') {
       setIsLoading(true);
       setTimeout(() => {
         setWalletData({
@@ -173,39 +172,66 @@ function ReputaAppContent() {
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             {/* منطق القفل: إذا لم يكن VIP ولم يكمل عمليتي دفع، يظهر قفل */}
-             {(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") ? (
-               <div className="max-w-2xl mx-auto p-12 bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200 text-center">
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm mb-6">
-                    <Lock className="w-6 h-6 text-gray-400" />
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+             
+             {/* القسم العلوي: الهوية والسكور (يظهر دائماً) */}
+             <WalletAnalysis 
+                walletData={walletData} 
+                isProUser={true} // نجعله true هنا ليظهر التصميم العلوي دائماً
+                onReset={() => setWalletData(null)} 
+                onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
+             />
+
+             {/* قسم التقرير المتقدم المقفل (Professional Audit Report) */}
+             <div className="relative max-w-2xl mx-auto">
+                {(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") && (
+                  <div className="absolute inset-0 z-20 backdrop-blur-md bg-white/40 rounded-[40px] border border-white/50 flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
+                    <div className="w-14 h-14 bg-white/80 rounded-2xl shadow-xl flex items-center justify-center mb-5 border border-purple-100">
+                      <Lock className="w-6 h-6 text-purple-600 animate-pulse" />
+                    </div>
+                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Audit Locked</h3>
+                    <p className="text-[10px] text-gray-500 mt-3 max-w-[220px] leading-relaxed font-medium">
+                      Complete <span className="text-purple-600 font-bold">2 Testnet transactions</span> to verify your identity and unlock the full report.
+                    </p>
+                    
+                    {/* عداد العمليات الصغير */}
+                    <div className="flex gap-2 mt-5">
+                      {[1, 2].map(i => (
+                        <div key={i} className={`w-10 h-1.5 rounded-full transition-colors duration-500 ${paymentCount >= i ? 'bg-green-500' : 'bg-gray-200'}`} />
+                      ))}
+                    </div>
+
+                    <button 
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="mt-6 px-10 py-3 bg-purple-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-purple-200 hover:scale-105 active:scale-95 transition-all"
+                    >
+                      Unlock VIP Report
+                    </button>
+                    <p className="mt-4 text-[7px] text-orange-400 font-black uppercase tracking-[0.2em]">⚠️ Developer Mode: Testnet Only</p>
                   </div>
-                  <h2 className="text-xl font-black text-gray-800 uppercase mb-2">Report Locked</h2>
-                  <p className="text-gray-500 text-xs mb-8 max-w-xs mx-auto font-medium">
-                    To unlock your deep analysis, complete at least <span className="text-purple-600 font-bold">2 mainnet transactions</span> to verify your wallet.
-                  </p>
-                  <div className="flex justify-center gap-2 mb-8">
-                    {[1, 2].map((i) => (
-                      <div key={i} className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 ${paymentCount >= i ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}>
-                        {paymentCount >= i ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <span className="text-gray-300 font-bold text-xs">{i}</span>}
+                )}
+
+                {/* صورة طبق الأصل من التقرير ليظهر خلف الـ Blur كما في طلبك */}
+                <div className={`transition-all duration-700 ${(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") ? 'opacity-20 grayscale pointer-events-none' : 'opacity-100'}`}>
+                   <div className="p-8 bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden">
+                      <div className="flex justify-between items-center mb-8">
+                        <div className="flex items-center gap-3">
+                          <ShieldCheck className="w-5 h-5 text-purple-600" />
+                          <h2 className="text-lg font-black text-gray-800 tracking-tight">Professional Audit Report</h2>
+                        </div>
+                        <span className="text-[8px] font-black px-3 py-1 bg-purple-50 text-purple-600 rounded-full uppercase border border-purple-100">Reputa Certified</span>
                       </div>
-                    ))}
-                  </div>
-                  <button 
-                    onClick={() => setIsUpgradeModalOpen(true)}
-                    className="px-8 py-4 bg-purple-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all"
-                  >
-                    Unlock Report Now
-                  </button>
-               </div>
-             ) : (
-               <WalletAnalysis 
-                  walletData={walletData} 
-                  isProUser={isVip} 
-                  onReset={() => setWalletData(null)} 
-                  onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
-               />
-             )}
+                      
+                      {/* هيكل البيانات (سيملأه مكون WalletAnalysis داخلياً) */}
+                      <div className="space-y-6">
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-purple-500 w-[80%]"></div></div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-[60%]"></div></div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-green-500 w-[100%]"></div></div>
+                      </div>
+                   </div>
+                </div>
+             </div>
+
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}

@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection (احترافية التباعد مع الحفاظ على الروح) ---
+// --- مكون FeedbackSection: يرسل البيانات إلى القائمة التي يقرأها الأدمين ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -18,13 +18,25 @@ function FeedbackSection({ username }: { username: string }) {
     if (!feedback.trim()) return;
     setStatus('SENDING...');
     try {
+      // إرسال التعليق إلى API الحفظ (يجب أن يخزن في قائمة feedbacks في Redis)
       const res = await fetch('/api/save-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, text: feedback, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ 
+          username: username || 'Anonymous', 
+          text: feedback, 
+          timestamp: new Date().toISOString() 
+        }),
       });
-      if (res.ok) { setFeedback(''); setStatus('✅ THANK YOU!'); setTimeout(() => setStatus(''), 3000); }
-    } catch (e) { setStatus('❌ ERROR'); setTimeout(() => setStatus(''), 2000); }
+      if (res.ok) { 
+        setFeedback(''); 
+        setStatus('✅ THANK YOU!'); 
+        setTimeout(() => setStatus(''), 3000); 
+      }
+    } catch (e) { 
+      setStatus('❌ ERROR'); 
+      setTimeout(() => setStatus(''), 2000); 
+    }
   };
 
   return (
@@ -58,18 +70,25 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
+  // --- تتبع الدخول لضمان ظهوره في الـ Admin Console ---
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
+        const guest = { username: "Anonymous", uid: "demo" };
+        setCurrentUser(guest);
+        // تسجيل دخول المتصفح الخارجي
+        sendLogToAdmin(guest.username, '');
         setIsInitializing(false);
         return;
       }
       try {
         await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
+        const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
         if (user) {
           setCurrentUser(user);
+          // تسجيل دخول البيونير
+          sendLogToAdmin(user.username, user.wallet_address || '');
+          
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
@@ -79,20 +98,22 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  const handleWalletCheck = async (address: string) => {
-    const isDemo = address.toLowerCase().trim() === 'demo';
-    setIsLoading(true);
+  // دالة موحدة لإرسال البيانات لقائمة 'pioneers' في Redis
+  const sendLogToAdmin = async (username: string, wallet: string) => {
+    try {
+      await fetch('/api/log-pioneer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, wallet, timestamp: new Date().toISOString() })
+      });
+    } catch (e) { /* ignore */ }
+  };
 
-    // تحسين منطق الديمو ليكون فورياً وقاطعاً
-    if (isDemo) {
+  const handleWalletCheck = async (address: string) => {
+    setIsLoading(true);
+    if (address.toLowerCase().trim() === 'demo') {
       setTimeout(() => {
-        setWalletData({
-          address: "GDU22WEH7M3O...DEMO",
-          username: "Demo_Pioneer",
-          reputaScore: 632,
-          trustLevel: "Elite",
-          transactions: []
-        });
+        setWalletData({ address: "GDU22WEH7M3O...DEMO", username: "Demo_Pioneer", reputaScore: 632, trustLevel: "Elite", transactions: [] });
         setIsLoading(false);
       }, 400); 
       return;
@@ -102,14 +123,18 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
+        // تسجيل عملية الفحص في صفحة الإدارة
+        sendLogToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
     } catch (error) { 
-      alert("Blockchain sync error."); 
+      alert("Sync error."); 
     } finally { 
       setIsLoading(false); 
     }
   };
+
+  const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   if (isInitializing && piBrowser) {
     return (
@@ -119,9 +144,6 @@ function ReputaAppContent() {
       </div>
     );
   }
-
-  // قاعدة Unlocking الصارمة: الديمو يفتح التقرير دائماً
-  const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -155,40 +177,20 @@ function ReputaAppContent() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-             
-             <div className="relative overflow-hidden rounded-[40px]">
-                <WalletAnalysis 
-                  walletData={walletData} 
-                  isProUser={isUnlocked} 
-                  onReset={() => setWalletData(null)} 
-                  onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
-                />
+             <div className="relative overflow-hidden rounded-[40px] border border-gray-50 shadow-sm">
+                <WalletAnalysis walletData={walletData} isProUser={isUnlocked} onReset={() => setWalletData(null)} onUpgradePrompt={() => setIsUpgradeModalOpen(true)} />
 
-                {/* طبقة القفل الذكية (Smart Overlay): احترافية وبمساحة رؤية مثالية */}
                 {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[40%] z-20 flex flex-col items-center justify-end">
-                    {/* التدرج والتمويه (Glassmorphism Effect) */}
+                  <div className="absolute inset-x-0 bottom-0 h-[45%] z-20 flex flex-col items-center justify-end">
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
-                    
-                    <div className="relative pb-10 px-6 text-center w-full">
-                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-purple-100 mb-3 animate-bounce">
-                        <Lock className="w-5 h-5 text-purple-600" />
-                      </div>
-                      
-                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
-                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Testnet Transaction</p>
-                      
-                      <button 
-                        onClick={() => setIsUpgradeModalOpen(true)}
-                        className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
-                      >
-                        Unlock Full Report
-                      </button>
+                    <div className="relative pb-8 px-6 text-center w-full">
+                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-md border border-purple-50 mb-3 animate-pulse"><Lock className="w-4 h-4 text-purple-600" /></div>
+                      <h3 className="text-[9px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
+                      <button onClick={() => setIsUpgradeModalOpen(true)} className="w-full max-w-[180px] py-3 bg-purple-600 text-white text-[8px] font-black uppercase rounded-xl shadow-lg active:scale-95 transition-all hover:bg-purple-700">Unlock Now</button>
                     </div>
                   </div>
                 )}
              </div>
-
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
@@ -198,16 +200,7 @@ function ReputaAppContent() {
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
-      <AccessUpgradeModal 
-        isOpen={isUpgradeModalOpen} 
-        onClose={() => setIsUpgradeModalOpen(false)} 
-        currentUser={currentUser}
-        onUpgrade={() => { 
-          setIsVip(true); 
-          setPaymentCount(1); 
-          setIsUpgradeModalOpen(false); 
-        }} 
-      />
+      <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} currentUser={currentUser} onUpgrade={() => { setIsVip(true); setPaymentCount(1); setIsUpgradeModalOpen(false); }} />
       <Analytics />
     </div>
   );

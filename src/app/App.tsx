@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock } from 'lucide-react';
+import { Send, MessageSquare, Lock, LogOut } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection (احترافية التباعد مع الحفاظ على الروح) ---
+// --- مكون FeedbackSection مرتبط بـ save-feedback.ts ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -23,7 +23,11 @@ function FeedbackSection({ username }: { username: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: feedback, timestamp: new Date().toISOString() }),
       });
-      if (res.ok) { setFeedback(''); setStatus('✅ THANK YOU!'); setTimeout(() => setStatus(''), 3000); }
+      if (res.ok) { 
+        setFeedback(''); 
+        setStatus('✅ THANK YOU!'); 
+        setTimeout(() => setStatus(''), 3000); 
+      }
     } catch (e) { setStatus('❌ ERROR'); setTimeout(() => setStatus(''), 2000); }
   };
 
@@ -58,19 +62,40 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
+  // --- دالة المزامنة المركزية مع save-pioneer لخدمة عرض view.ts ---
+  const syncToAdmin = async (uname: string, waddr: string) => {
+    try {
+      await fetch('/api/save-pioneer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: uname, 
+          wallet: waddr, 
+          timestamp: new Date().toISOString() 
+        })
+      });
+    } catch (e) { console.error("Admin Sync Error"); }
+  };
+
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
+        const guest = { username: "Guest_Explorer", uid: "demo" };
+        setCurrentUser(guest);
+        syncToAdmin(guest.username, "External Browser");
         setIsInitializing(false);
         return;
       }
       try {
         await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
+        const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+          // 1. إرسال بيانات الدخول فوراً لـ save-pioneer
+          syncToAdmin(user.username, user.wallet_address || "Pending...");
+          
+          // 2. التحقق من حالة الـ VIP من checkVip.ts
+          const res = await fetch(`/api/checkVip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
         }
@@ -83,7 +108,6 @@ function ReputaAppContent() {
     const isDemo = address.toLowerCase().trim() === 'demo';
     setIsLoading(true);
 
-    // تحسين منطق الديمو ليكون فورياً وقاطعاً
     if (isDemo) {
       setTimeout(() => {
         setWalletData({
@@ -102,6 +126,8 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
+        // 3. تحديث المحفظة المفحوصة في لوحة تحكم الإدارة
+        syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
     } catch (error) { 
@@ -120,7 +146,6 @@ function ReputaAppContent() {
     );
   }
 
-  // قاعدة Unlocking الصارمة: الديمو يفتح التقرير دائماً
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
@@ -136,6 +161,10 @@ function ReputaAppContent() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* زر تسجيل الخروج لفك تعليق الحساب */}
+          <button onClick={() => { setWalletData(null); setIsVip(false); setPaymentCount(0); }} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+            <LogOut className="w-4 h-4" />
+          </button>
           <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
             <Send className="w-4 h-4" />
           </a>
@@ -155,7 +184,6 @@ function ReputaAppContent() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-             
              <div className="relative overflow-hidden rounded-[40px]">
                 <WalletAnalysis 
                   walletData={walletData} 
@@ -164,20 +192,16 @@ function ReputaAppContent() {
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
 
-                {/* طبقة القفل الذكية (Smart Overlay): احترافية وبمساحة رؤية مثالية */}
+                {/* طبقة القفل الذكية - مغطاة في الوسط بنسبة 41% */}
                 {!isUnlocked && (
                   <div className="absolute inset-x-0 bottom-0 h-[41%] z-20 flex flex-col items-center justify-end">
-                    {/* التدرج والتمويه (Glassmorphism Effect) */}
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
-                    
                     <div className="relative pb-10 px-6 text-center w-full">
                       <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-purple-100 mb-3 animate-bounce">
                         <Lock className="w-5 h-5 text-purple-600" />
                       </div>
-                      
                       <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
                       <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Testnet Transaction</p>
-                      
                       <button 
                         onClick={() => setIsUpgradeModalOpen(true)}
                         className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
@@ -188,7 +212,6 @@ function ReputaAppContent() {
                   </div>
                 )}
              </div>
-
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
@@ -206,6 +229,8 @@ function ReputaAppContent() {
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
+          // مزامنة حالة الدفع مع الإدارة
+          syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
         }} 
       />
       <Analytics />

@@ -16,24 +16,31 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const rawPioneers = await redis.lrange('pioneers', 0, -1);
-    const rawFeedbacks = await redis.lrange('feedbacks', 0, -1);
+    // جلب البيانات مع تحديد سقف لضمان عدم انهيار الذاكرة
+    const rawPioneers = await redis.lrange('pioneers', 0, 1000); 
+    const rawFeedbacks = await redis.lrange('feedbacks', 0, 50);
 
     const pioneerMap = new Map();
+
     rawPioneers.forEach((item: any) => {
       try {
         const p = typeof item === 'string' ? JSON.parse(item) : item;
         
+        // التحقق من صحة البيانات الأساسية
+        if (!p) return;
+
         const isExternal = !p.username || p.username === 'Anonymous';
         const username = isExternal ? '🌐 External User / Browser' : p.username;
-        
         const isVipSignal = p.wallet === "UPGRADED_TO_VIP" || p.wallet === "VIP_PAYMENT_CONFIRMED";
+        
+        // تنظيف المحفظة لضمان عمل الفحص السريع
+        const cleanWallet = p.wallet ? p.wallet.trim() : null;
 
         if (!pioneerMap.has(username)) {
           pioneerMap.set(username, { 
             username, 
-            wallets: new Set(p.wallet && !isVipSignal ? [p.wallet] : []), 
-            timestamps: [p.timestamp], 
+            wallets: new Set(cleanWallet && !isVipSignal ? [cleanWallet] : []), 
+            timestamps: [p.timestamp || new Date().toISOString()], 
             count: 1,
             isExternal: isExternal,
             isVip: isVipSignal
@@ -41,15 +48,23 @@ export default async function handler(req: any, res: any) {
         } else {
           const existing = pioneerMap.get(username);
           existing.count += 1;
-          existing.timestamps.push(p.timestamp);
+          existing.timestamps.push(p.timestamp || new Date().toISOString());
           if (isVipSignal) existing.isVip = true;
-          if (p.wallet && !isVipSignal) existing.wallets.add(p.wallet);
+          if (cleanWallet && !isVipSignal) existing.wallets.add(cleanWallet);
+          // ترتيب الأوقات داخل سجل المستخدم الواحد
           existing.timestamps.sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
         }
-      } catch (e) {}
+      } catch (e) {
+        // في حال وجود سجل تالف، نتجاوزه ولا نوقف الكود
+        console.error("Skipping corrupted record");
+      }
     });
 
-    const allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime());
+    // الترتيب النهائي: إظهار من دخل التطبيق "الآن" في أول القائمة
+    const allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => {
+      return new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime();
+    });
+
     const totalItems = allPioneers.length;
     const totalVip = allPioneers.filter(u => u.isVip).length;
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -61,6 +76,11 @@ export default async function handler(req: any, res: any) {
       
       const walletsJson = JSON.stringify(walletArray).replace(/'/g, "\\'");
       const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString())).replace(/'/g, "\\'");
+
+      // إضافة بصمة زمنية متغيرة لرابط الفحص لمنع مشكلة الـ Reload
+      const fastCheckUrl = primaryWallet.startsWith('G') 
+        ? `https://pinetwork-explorer.com/account/${primaryWallet.trim()}?v=${Date.now()}`
+        : '#';
 
       const rowStyle = u.isVip ? 'background-color: #fffbeb; border-left: 4px solid #f59e0b;' : u.isExternal ? 'background-color: #fff8f8;' : '';
 
@@ -78,10 +98,14 @@ export default async function handler(req: any, res: any) {
         <td class="wallet-cell">
           <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
           <code>${primaryWallet}</code>
-          ${walletArray.length > 1 ? `<span class="multi-tag" style="font-size: 10px; color: #6366f1; cursor: pointer; font-weight: bold; margin-left: 5px;" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
+          <div style="margin-top: 5px;">
+            ${primaryWallet.startsWith('G') ? `<button onclick="window.open('${fastCheckUrl}', '_blank')" style="background:#10b981; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold;">🔍 FAST CHECK</button>` : ''}
+            ${walletArray.length > 1 ? `<span class="multi-tag" style="font-size: 10px; color: #6366f1; cursor: pointer; font-weight: bold; margin-left: 5px;" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
+          </div>
         </td>
         <td class="date-cell">
-          <div class="last-seen">${new Date(u.timestamps[0]).toLocaleString()}</div>
+          <div class="last-seen" style="font-weight:bold; color:var(--primary);">${new Date(u.timestamps[0]).toLocaleString()}</div>
+          <div style="font-size:9px; color:#94a3b8;">Latest Active</div>
         </td>
       </tr>
     `}).join('');
@@ -112,36 +136,8 @@ export default async function handler(req: any, res: any) {
           .active { background: #10b981; } .inactive { background: #cbd5e1; }
           code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
           .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; align-self: start; }
-          .pagination { margin-top: 25px; text-align: center; }
-          .pg-btn { padding: 10px 18px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; }
-          
-          /* التعديل الجوهري للنافذة المنبثقة */
-          #modal { 
-            display: none; 
-            position: fixed; 
-            top:0; left:0; 
-            width:100%; height:100%; 
-            background: rgba(15, 23, 42, 0.85); 
-            z-index: 9999; 
-            justify-content: center; 
-            align-items: center; 
-            backdrop-filter: blur(5px);
-            padding: 15px;
-            box-sizing: border-box;
-          }
-          .modal-content { 
-            background: white; 
-            width: 100%; 
-            max-width: 500px; 
-            max-height: 85vh;
-            border-radius: 24px; 
-            padding: 0; 
-            position: relative; 
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); 
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-          }
+          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.85); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 15px; box-sizing: border-box; }
+          .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 24px; padding: 0; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
           .modal-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
           .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
         </style>
@@ -170,21 +166,22 @@ export default async function handler(req: any, res: any) {
                   <tbody>${rows}</tbody>
                 </table>
               </div>
-              <div class="pagination">
-                  ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">← Previous</a>` : ''}
-                  <span class="pg-btn" style="background:var(--primary); color:white; border:none;">Page ${currentPage} of ${totalPages}</span>
-                  ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next →</a>` : ''}
+              <div style="margin-top:20px; text-align:center;">
+                  ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">← Prev</a>` : ''}
+                  <span style="margin: 0 15px; font-weight:bold;">Page ${currentPage} of ${totalPages}</span>
+                  ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">Next →</a>` : ''}
               </div>
             </div>
 
             <div class="feedback-panel">
-              <h3 style="margin-top:0; font-size: 13px; color: #64748b; border-bottom: 2px solid var(--accent); padding-bottom: 12px; letter-spacing: 0.05em;">LATEST FEEDBACK</h3>
+              <h3 style="margin-top:0; font-size: 13px; color: #64748b; border-bottom: 2px solid var(--accent); padding-bottom: 12px;">LATEST FEEDBACK</h3>
               ${rawFeedbacks.reverse().slice(0, 15).map((f: any) => {
-                const data = typeof f === 'string' ? JSON.parse(f) : f;
-                return `<div style="font-size:12px; padding:12px 0; border-bottom:1px solid #f1f5f9;">
-                          <b style="color:var(--primary)">@${data.username}:</b> 
-                          <span style="color:#475569">${data.text}</span>
-                        </div>`;
+                try {
+                  const data = typeof f === 'string' ? JSON.parse(f) : f;
+                  return `<div style="font-size:11px; padding:10px 0; border-bottom:1px solid #f1f5f9;">
+                            <b style="color:var(--primary)">@${data.username || 'Anon'}:</b> <span style="color:#475569">${data.text || ''}</span>
+                          </div>`;
+                } catch(e) { return ''; }
               }).join('')}
             </div>
           </div>
@@ -212,52 +209,33 @@ export default async function handler(req: any, res: any) {
               wallets.forEach(w => {
                 html += \`<div style="background:#f8fafc; padding:12px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:12px;">
                             <div style="word-break:break-all; font-family:monospace; font-size:12px; color:#334155; margin-bottom:10px;">\${w}</div>
-                            <button onclick="copyAction('\${w}')" style="width:100%; background:white; border:1px solid #cbd5e1; padding:8px; border-radius:8px; font-size:10px; font-weight:bold; cursor:pointer; color:#6366f1;">COPY WALLET</button>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="copyAction('\${w}')" style="flex:1; background:white; border:1px solid #cbd5e1; padding:8px; border-radius:8px; font-size:10px; font-weight:bold; cursor:pointer;">COPY</button>
+                                <button onclick="window.open('https://pinetwork-explorer.com/account/\${w.trim()}?v=\${Date.now()}', '_blank')" style="flex:1; background:#10b981; color:white; border:none; padding:8px; border-radius:8px; font-size:10px; font-weight:bold; cursor:pointer;">CHECK</button>
+                            </div>
                           </div>\`;
               });
-            } else {
-              html += '<p style="font-size:12px; color:#94a3b8;">No wallets found.</p>';
-            }
+            } else { html += '<p style="font-size:12px; color:#94a3b8;">No wallets found.</p>'; }
 
-            html += '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase; margin-top:25px; margin-bottom:15px;">Access Log</h4>';
+            html += '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase; margin-top:25px; margin-bottom:15px;">Access Log (Recent First)</h4>';
             times.forEach(t => { 
-              html += \`<div style="font-size:11px; color:#64748b; padding:10px 0; border-bottom:1px solid #f1f5f9; display:flex; align-items:center;">
-                         <span style="color:#10b981; margin-right:10px;">•</span> \${t}
-                       </div>\`; 
+              html += \`<div style="font-size:11px; color:#64748b; padding:10px 0; border-bottom:1px solid #f1f5f9;">\${t}</div>\`; 
             });
 
             body.innerHTML = html;
             modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
           }
 
-          function closeModal() { 
-            document.getElementById('modal').style.display = 'none'; 
-            document.body.style.overflow = 'auto';
-          }
-
+          function closeModal() { document.getElementById('modal').style.display = 'none'; }
           function copyAction(text) {
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
-            try {
-              document.execCommand('copy');
-              alert('Wallet copied to clipboard!');
-            } catch (err) {
-              console.error('Copy failed');
-            }
-            document.body.removeChild(el);
+            navigator.clipboard.writeText(text);
+            alert('Copied!');
           }
-
-          window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-          });
         </script>
       </body>
       </html>
     `);
   } catch (error: any) {
-    return res.status(500).send("Admin Sync Error: " + error.message);
+    return res.status(500).send("Admin Error: " + error.message);
   }
 }

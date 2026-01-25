@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';   
+import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
 import { Send, MessageSquare, Lock } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
@@ -71,8 +71,9 @@ function ReputaAppContent() {
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
+        // إذا لم يكن متصفح Pi، ادخل فوراً كضيف
         setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
-        setIsInitializing(false);
+        setIsInitializing(false); // إنهاء وضع التحميل للسماح للواجهة بالظهور
         return;
       }
       try {
@@ -84,11 +85,20 @@ function ReputaAppContent() {
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
+        } else {
+          // إذا فشل توثيق Pi SDK حتى في متصفح Pi، ادخل كضيف
+          setCurrentUser({ username: "Pioneer_Guest", uid: "fallback_pi" });
         }
-      } catch (e) { console.warn("Pi SDK failed"); } finally { setIsInitializing(false); }
+      } catch (e) { 
+        console.warn("Pi SDK initialization or authentication failed:", e); 
+        // في حال حدوث خطأ حتى في متصفح Pi، ادخل كضيف لتجنب التعليق
+        setCurrentUser({ username: "Pioneer_Error", uid: "error_pi" });
+      } finally { 
+        setIsInitializing(false); // تأكيد إنهاء التحميل في كل الحالات
+      }
     };
     initApp();
-  }, [piBrowser]);
+  }, [piBrowser]); // الاعتماد على piBrowser يضمن إعادة التشغيل عند التغيير
 
   const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
@@ -124,6 +134,7 @@ function ReputaAppContent() {
     }
   };
 
+  // تعديل الشرط هنا: شاشة التحميل تظهر فقط إذا كان التطبيق يقوم بالتهيئة وفي متصفح Pi
   if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">

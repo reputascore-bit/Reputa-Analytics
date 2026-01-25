@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection (مرتبط بـ save-feedback.ts) ---
+// --- FeedbackSection Component ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -70,12 +70,13 @@ function ReputaAppContent() {
 
   useEffect(() => {
     const initApp = async () => {
+      // إصلاح: إذا لم يكن متصفح Pi، ننهي التحميل فوراً ونضع بيانات افتراضية
       if (!piBrowser) {
-        // إذا لم يكن متصفح Pi، ادخل فوراً كضيف
-        setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
-        setIsInitializing(false); // إنهاء وضع التحميل للسماح للواجهة بالظهور
+        setCurrentUser({ username: "Explorer_Guest", uid: "guest" });
+        setIsInitializing(false);
         return;
       }
+
       try {
         await initializePiSDK();
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
@@ -85,38 +86,33 @@ function ReputaAppContent() {
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
-        } else {
-          // إذا فشل توثيق Pi SDK حتى في متصفح Pi، ادخل كضيف
-          setCurrentUser({ username: "Pioneer_Guest", uid: "fallback_pi" });
         }
-      } catch (e) { 
-        console.warn("Pi SDK initialization or authentication failed:", e); 
-        // في حال حدوث خطأ حتى في متصفح Pi، ادخل كضيف لتجنب التعليق
-        setCurrentUser({ username: "Pioneer_Error", uid: "error_pi" });
-      } finally { 
-        setIsInitializing(false); // تأكيد إنهاء التحميل في كل الحالات
+      } catch (e) {
+        console.warn("Pi SDK Fail");
+        setCurrentUser({ username: "Pioneer_Guest", uid: "guest" });
+      } finally {
+        setIsInitializing(false);
       }
     };
     initApp();
-  }, [piBrowser]); // الاعتماد على piBrowser يضمن إعادة التشغيل عند التغيير
+  }, []); // تشغيل مرة واحدة عند التحميل
 
   const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
     setIsLoading(true);
 
     if (isDemo) {
-      setTimeout(() => {
-        setWalletData({
-          address: "GDU22WEH7M3O...DEMO",
-          username: "Demo_Pioneer",
-          reputaScore: 632,
-          trustLevel: "Elite",
-          recentActivity: [
-             { id: "tx_8212", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
-          ]
-        });
-        setIsLoading(false);
-      }, 400); 
+      // إصلاح الـ Demo: بيانات فورية مع توقيت دقيق كما طلبت
+      setWalletData({
+        address: "GDU22WEH7M3O...DEMO",
+        username: "Demo_Pioneer",
+        reputaScore: 632,
+        trustLevel: "Elite",
+        recentActivity: [
+          { id: "tx_demo_1", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
+        ]
+      });
+      setIsLoading(false);
       return;
     }
 
@@ -134,7 +130,7 @@ function ReputaAppContent() {
     }
   };
 
-  // تعديل الشرط هنا: شاشة التحميل تظهر فقط إذا كان التطبيق يقوم بالتهيئة وفي متصفح Pi
+  // إصلاح: شاشة التحميل تظهر فقط في متصفح Pi وبشرط أن يكون النظام لا يزال في طور التهيئة
   if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
@@ -179,7 +175,6 @@ function ReputaAppContent() {
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
              <div className="relative overflow-hidden rounded-[40px]">
-                {/* تم تمرير البيانات المحدثة للمكون المسؤول عن العرض */}
                 <WalletAnalysis 
                   walletData={walletData} 
                   isProUser={isUnlocked} 

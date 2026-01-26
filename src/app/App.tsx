@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck } from 'lucide-react';
+import { Send, MessageSquare, Lock, ShieldCheck, Beaker } from 'lucide-react'; // أضفت أيقونة Beaker للتست نت
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -101,7 +101,7 @@ function ReputaAppContent() {
         username: "Demo_Pioneer",
         reputaScore: 632,
         trustLevel: "Elite",
-        recentActivity: [{ id: "tx_8", type: "Pi DEX", subType: "Ecosystem", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today" }]
+        recentActivity: [{ id: "tx_8", type: "Testnet Swap", subType: "Ecosystem", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today" }]
       });
       setIsLoading(false);
       return;
@@ -118,10 +118,13 @@ function ReputaAppContent() {
   };
 
   const handleWalletCheck = (address: string) => {
-    // المنطق الجديد: إذا لم يدفع، نغلق التطبيق ونفتح نافذة الترقية فوراً
     if (!isVip && paymentCount < 1) {
-      setPendingAddress(address); // حفظ العنوان لحين إتمام الدفع
-      setIsUpgradeModalOpen(true);
+      // إشعار بسيط يوضح أن العملية هي Testnet ومطلوبة للمتابعة
+      const confirmMsg = "Unlock detailed Audit Report via Pi Testnet transaction? \n\n(This is a secure Testnet process to verify your identity)";
+      if (window.confirm(confirmMsg)) {
+        setPendingAddress(address);
+        setIsUpgradeModalOpen(true);
+      }
       return;
     }
     executeCheck(address);
@@ -143,8 +146,8 @@ function ReputaAppContent() {
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase">
-                Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
+            <p className="text-[10px] text-gray-400 font-black uppercase flex items-center gap-1">
+                <Beaker className="w-2 h-2" /> Testnet Mode
             </p>
           </div>
         </div>
@@ -159,20 +162,26 @@ function ReputaAppContent() {
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Protocol...</p>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Checking Testnet Ledger...</p>
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
-            {/* واجهة الفحص الأساسية */}
             <div className="mb-8 text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full mb-4">
                     <ShieldCheck className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase">Secure Protocol v4.2</span>
+                    <span className="text-[9px] font-black uppercase tracking-tighter">Testnet Protocol v4.2 Secured</span>
                 </div>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Enter Wallet Address<br/>To Start Audit</h2>
+                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/><span className="text-purple-600">On Testnet</span></h2>
             </div>
             
             <WalletChecker onCheck={handleWalletCheck} />
+            
+            <div className="mt-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+               <p className="text-[9px] text-gray-400 font-bold uppercase text-center leading-relaxed">
+                 * All audits require 1 Pi Testnet verification to unlock the full reputation data.
+               </p>
+            </div>
+
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
@@ -180,7 +189,7 @@ function ReputaAppContent() {
              <div className="relative overflow-hidden rounded-[40px]">
                 <WalletAnalysis 
                   walletData={walletData} 
-                  isProUser={true} // بما أنه وصل هنا، فهو دفع حتماً
+                  isProUser={true} 
                   onReset={() => setWalletData(null)} 
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
@@ -191,13 +200,13 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-6 text-center border-t border-gray-50 flex flex-col items-center gap-4">
-        <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full">
+        <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full transition-all active:scale-95">
           <Send className="w-3 h-3" />
           <span className="text-[9px] font-black uppercase tracking-widest">Join Telegram Community</span>
         </a>
+        <div className="text-[8px] text-gray-300 font-black uppercase tracking-[0.3em]">Pi Network Testnet Audit Tool</div>
       </footer>
 
-      {/* نافذة الدفع الإجبارية */}
       <AccessUpgradeModal 
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
@@ -206,8 +215,7 @@ function ReputaAppContent() {
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
-          // إذا كان هناك فحص معلق، نفذه فوراً بعد الدفع
+          syncToAdmin(currentUser?.username, "TESTNET_PAYMENT_CONFIRMED");
           if (pendingAddress) {
             executeCheck(pendingAddress);
             setPendingAddress(null);

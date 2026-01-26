@@ -166,9 +166,9 @@ function ReputaAppContent() {
             <div className="mb-8 text-center">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full mb-3">
                     <ShieldCheck className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Reputation Protocol Testnet</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Reputation Protocol</span>
                 </div>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/>On Testnet</h2>
+                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/></h2>
             </div>
 
             <WalletChecker onCheck={handleWalletCheck} />
@@ -192,7 +192,7 @@ function ReputaAppContent() {
                         <Lock className="w-5 h-5 text-purple-600" />
                       </div>
                       <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
-                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Testnet Transaction</p>
+                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Pi Transaction</p>
                       <button 
                         onClick={() => setIsUpgradeModalOpen(true)}
                         className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
@@ -218,7 +218,7 @@ function ReputaAppContent() {
           <Send className="w-3 h-3" />
           <span className="text-[9px] font-black uppercase tracking-widest">Join Telegram Community</span>
         </a>
-        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
+        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v2 Stable</div>
       </footer>
 
       <AccessUpgradeModal 

@@ -1,32 +1,32 @@
-/** * Pi SDK Service - Unified wrapper for Pi Network SDK
- */
+// piSdk.ts - العودة لبيئة الاختبار بالكامل
 
-export function isPiBrowser(): boolean {
-  return typeof window !== 'undefined' && 'Pi' in window;
-}
-
-/**
- * ✅ الحل السحري: محاولة التهيئة بدون "حبس" الكود في انتظار Sandbox
- */
-export async function initializePiSDK(): Promise<void> {
-  if (!isPiBrowser()) return;
-  
-  const Pi = (window as any).Pi;
-  try {
-    // نلغي الـ Sandbox مؤقتاً أو نجعله خياراً ثانوياً ليعود الربط للعمل
-    // إذا كنت تريد العودة للحالة التي كانت تعمل، اجعل sandbox: false
-    await Pi.init({ version: '2.0', sandbox:  true });
-    console.log('[PI SDK] Initialized in Standard Mode');
-  } catch (error) {
-    console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
-    try {
-      await Pi.init({ version: '2.0', sandbox: true });
-    } catch (e) {
-      console.error('[PI SDK] Global Init Failure');
-    }
+export const initializePiSDK = async () => {
+  if (typeof window !== 'undefined' && (window as any).Pi) {
+    // التعديل الأول: تفعيل الساندبوكس (Testnet)
+    await (window as any).Pi.init({ 
+      version: "2.0", 
+      sandbox: true 
+    });
+    console.log("Pi SDK initialized in Testnet mode");
   }
-}
+};
 
+export const authenticateUser = async (scopes: string[]) => {
+  try {
+    // التعديل الثاني: التأكد من أن التوثيق يذهب لرابط التست نت
+    // الرابط الذي يجب أن يكون في الكود هو: https://api.testnet.minepi.com
+    const auth = await (window as any).Pi.authenticate(scopes, onIncompletePaymentFound);
+    return auth.user;
+  } catch (err) {
+    console.error("Auth failed:", err);
+    throw err;
+  }
+};
+
+// هذا الرابط هو المسؤول عن توجيه المدفوعات للتست نت وحل مشكلة "Paiement expiré"
+const onIncompletePaymentFound = (payment: any) => {
+  console.log("Incomplete payment found on Testnet:", payment);
+};
 /**
  * ✅ إعادة زر Link Account للحياة
  */

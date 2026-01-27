@@ -58,15 +58,20 @@ function ReputaAppContent() {
   
   // عداد مخفي لتفعيل زر الدفع (App-to-User)
   const [logoClickCount, setLogoClickCount] = useState(0);
+  // حالة جديدة لإدخال المحفظة يدوياً
+  const [manualWallet, setManualWallet] = useState('');
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
   const handleReward = () => {
-    if (currentUser?.wallet_address) {
-      executeExternalPayout(currentUser.wallet_address, 0.01, "Reward for High Reputa Score");
+    // استخدام المحفظة المدخلة يدوياً كأولوية، وإلا استخدام محفظة المستخدم الحالي
+    const targetAddress = manualWallet.trim() || currentUser?.wallet_address;
+    
+    if (targetAddress && targetAddress.length > 20) {
+      executeExternalPayout(targetAddress, 0.01, "Reward for High Reputa Score");
     } else {
-      alert("Wallet address not found.");
+      alert("Please enter a valid wallet address (G...)");
     }
   };
 
@@ -151,7 +156,7 @@ function ReputaAppContent() {
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
-          {/* الضغط على الشعار 5 مرات يظهر زر الـ App-to-User المخفي */}
+          {/* الضغط على الشعار 5 مرات يظهر لوحة التحكم المخفية */}
           <img 
             src={logoImage} 
             alt="logo" 
@@ -166,14 +171,23 @@ function ReputaAppContent() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* زر مخفي يظهر للمطور فقط لإرسال العملات واستيفاء شرط الـ 10 معاملات */}
+          {/* لوحة إدخال العنوان يدوياً تظهر للمطور فقط */}
           {logoClickCount >= 5 && (
-            <button 
-              onClick={handleReward}
-              className="px-3 py-1 bg-red-500 text-white text-[8px] font-bold rounded-full animate-pulse"
-            >
-              PAY OUT (DEV)
-            </button>
+            <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100">
+              <input 
+                type="text"
+                placeholder="Target G..."
+                value={manualWallet}
+                onChange={(e) => setManualWallet(e.target.value)}
+                className="text-[8px] p-1.5 border rounded-lg w-24 outline-none focus:ring-1 focus:ring-red-400"
+              />
+              <button 
+                onClick={handleReward}
+                className="px-3 py-1.5 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase animate-pulse"
+              >
+                PAY
+              </button>
+            </div>
           )}
           <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
             <Send className="w-4 h-4" />

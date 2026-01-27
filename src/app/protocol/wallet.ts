@@ -2,11 +2,12 @@ import type { WalletData, Transaction } from './types';
 
 export async function fetchWalletData(walletAddress: string): Promise<WalletData> {
   try {
-    const accountRes = await fetch(`https://api.mainnet.minepi.com/accounts/${walletAddress}`);
+    // ✅ تعديل 1: جلب بيانات الحساب والرصيد من التست نت بدلاً من المينينت
+    const accountRes = await fetch(`https://api.testnet.minepi.com/accounts/${walletAddress}`);
     if (!accountRes.ok) throw new Error('Account not found');
     const accountData = await accountRes.json();
 
-    // جلب 20 معاملة لضمان وجود بيانات كافية للحسابات الإحصائية (تجنب NaN)
+    // جلب المعاملات من التست نت (كما هي)
     const paymentsRes = await fetch(`https://api.testnet.minepi.com/accounts/${walletAddress}/payments?limit=50&order=desc`);
     const paymentsData = await paymentsRes.json();
     const records = paymentsData._embedded?.records || [];
@@ -31,7 +32,7 @@ export async function fetchWalletData(walletAddress: string): Promise<WalletData
     const nativeBalance = accountData.balances.find((b: any) => b.asset_type === 'native');
     const balanceValue = nativeBalance ? parseFloat(nativeBalance.balance) : 0;
 
-    // حساب السكور
+    // حساب السكور (سيعتمد الآن على رصيد التست نت لضمان المنطق)
     const scoreFromBalance = Math.min((balanceValue / 1000) * 400, 400); 
     const scoreFromActivity = Math.min((records.length / 20) * 300, 300);
     const scoreFromAge = Math.min((accountAgeDays / 365) * 300, 300);
@@ -45,8 +46,7 @@ export async function fetchWalletData(walletAddress: string): Promise<WalletData
       reputaScore: finalScore,
       createdAt: firstTxDate,
       transactions: allTransactions,
-      // ✅ نرسل رقماً حقيقياً (عدد العمليات الفرعية) بدلاً من كلمة Active أو الرقم المليوني
-      totalTransactions: accountData.subentry_count + records.length 
+      totalTransactions: (accountData.subentry_count || 0) + records.length 
     };
   } catch (error) {
     console.error("Fetch Error:", error);

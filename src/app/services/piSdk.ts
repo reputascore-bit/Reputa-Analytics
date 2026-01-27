@@ -15,12 +15,12 @@ export async function initializePiSDK(): Promise<void> {
   try {
     // نلغي الـ Sandbox مؤقتاً أو نجعله خياراً ثانوياً ليعود الربط للعمل
     // إذا كنت تريد العودة للحالة التي كانت تعمل، اجعل sandbox: false
-    await Pi.init({ version: '2.0', sandbox:  true });
+    await Pi.init({ version: '2.0', sandbox:  false });
     console.log('[PI SDK] Initialized in Standard Mode');
   } catch (error) {
     console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
     try {
-      await Pi.init({ version: '2.0', sandbox: true });
+      await Pi.init({ version: '2.0', sandbox: false });
     } catch (e) {
       console.error('[PI SDK] Global Init Failure');
     }

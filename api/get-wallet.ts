@@ -73,10 +73,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const walletData = {
       walletAddress: cleanWallet,
-      explorerUrl: `https://pinetwork-explorer.com/account/${cleanWallet}?v=${Date.now()}`,
+      explorerUrl: `https://minepi.com/blockexplorer-testnet/account/${cleanWallet}?v=${Date.now()}`,
       
       balance: parseFloat((Math.random() * 500 + 50).toFixed(2)),
-      network: (process.env.PI_NETWORK as string) || 'mainnet',
+      network: (process.env.PI_NETWORK as string) || 'testnet',
       userId: userId || 'active_user',
       lastUpdated: new Date().toISOString(),
       

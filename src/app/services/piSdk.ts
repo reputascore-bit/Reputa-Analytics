@@ -20,7 +20,7 @@ export async function initializePiSDK(): Promise<void> {
   } catch (error) {
     console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
     try {
-      await Pi.init({ version: '2.0', sandbox: true });
+      await Pi.init({ version: '2.0', sandbox: false });
     } catch (e) {
       console.error('[PI SDK] Global Init Failure');
     }

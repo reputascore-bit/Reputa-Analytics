@@ -1,32 +1,34 @@
-// OutboundDistributor.ts
-// ملف منعزل لإدارة المعاملات من التطبيق للمستخدم (App-to-User)
-
-export const executeExternalPayout = async (userWallet: string, amount: number, memoText: string) => {
+// تأكد من أن الإعدادات داخل OutboundDistributor تتطابق مع Mainnet
+export const executeExternalPayout = async (address: string, amount: number, memo: string) => {
   try {
-    // التأكد من وجود SDK في نافذة المتصفح
-    if (!(window as any).Pi) {
-      console.error("Pi SDK is not initialized");
-      return;
-    }
-
-    const payment = await (window as any).Pi.createPayment({
+    // إذا كنت تستخدم Pi SDK للتحويل من التطبيق للمستخدم (App-to-User)
+    // يجب أن تكون المحفظة التي ترسل منها تحتوي على رصيد كافٍ ورسوم (Fees)
+    const payment = await window.Pi.createPayment({
       amount: amount,
-      memo: memoText, 
-      metadata: { action: "REPUTA_DISTRIBUTION" },
-      uid: `dist_${Date.now()}`
+      memo: memo,
+      metadata: { target_address: address },
+      uid: "payout_event_" + Date.now()
     }, {
+      // ⚠️ ملاحظة هامة: لكي تكتمل هذه المعاملة، يجب أن تكون محفظة المطور 
+      // مرتبطة بـ App Wallet ومفعلة في الـ Developer Portal
       onReadyForServerApproval: (paymentId: string) => {
-        // يتم استدعاء API السيرفر الخاص بك هنا للموافقة
-        console.log("العملية تنتظر موافقة السيرفر، رقم المعاملة:", paymentId);
+        // استدعاء السيرفر لعمل Approve
+        fetch('/api/pi-payment', {
+          method: 'POST',
+          body: JSON.stringify({ paymentId, action: 'approve' })
+        });
       },
       onReadyForServerCompletion: (paymentId: string, txid: string) => {
-        console.log("اكتملت المعاملة بنجاح على البلوكشين:", txid);
-        // هنا يمكنك إضافة منطق لتحديث واجهتك إذا أردت
+        // استدعاء السيرفر لعمل Complete
+        fetch('/api/pi-payment', {
+          method: 'POST',
+          body: JSON.stringify({ paymentId, action: 'complete', txid })
+        });
       },
-      onCancel: (paymentId: string) => console.log("تم إلغاء عملية الدفع الخارجة"),
-      onError: (error: any) => console.error("حدث خطأ أثناء الدفع للمستخدم:", error),
+      onCancel: (paymentId: string) => console.log("Cancelled"),
+      onError: (error: Error, paymentId?: string) => console.error(error)
     });
-  } catch (err) {
-    console.error("فشل تقني في محرك التوزيع:", err);
+  } catch (e) {
+    console.error("Payout failed", e);
   }
 };

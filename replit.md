@@ -44,7 +44,21 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - Falls back to Guest mode in regular browsers
 - SDK initialization has 5-second timeout fallback
 
+## Design System
+- **Theme**: Dark futuristic dashboard with glassmorphism
+- **Color Palette**:
+  - Primary BG: #0A0B0F to #0F1117
+  - Card BG: rgba(30, 33, 40, 0.6) with blur
+  - Accent Cyan: #00D9FF
+  - Accent Purple: #8B5CF6
+  - Text Primary: rgba(255, 255, 255, 0.95)
+  - Text Secondary: rgba(160, 164, 184, 0.8)
+- **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
+
 ## Recent Changes
-- January 28, 2026: Updated UI with futuristic dashboard design
+- January 28, 2026: RADICAL UI RESTRUCTURE - Dark futuristic dashboard theme
+- January 28, 2026: Added glassmorphism cards and neon glow effects
+- January 28, 2026: Created futuristic.css with comprehensive dark theme styles
+- January 28, 2026: Updated header with glowing logo and neon text effects
 - January 28, 2026: Fixed browser compatibility (Guest mode for non-Pi browsers)
 - January 28, 2026: Configured for Replit environment (port 5000, host 0.0.0.0, allowed all hosts)

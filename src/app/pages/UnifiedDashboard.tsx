@@ -34,7 +34,7 @@ interface UnifiedDashboardProps {
   username?: string;
 }
 
-type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'profile';
+type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'profile' | 'settings' | 'feedback' | 'help' | 'privacy' | 'terms';
 
 export function UnifiedDashboard({ 
   walletData,
@@ -86,6 +86,11 @@ export function UnifiedDashboard({
       'portfolio': 'portfolio',
       'wallet': 'wallet',
       'profile': 'profile',
+      'settings': 'settings',
+      'feedback': 'feedback',
+      'help': 'help',
+      'privacy': 'privacy',
+      'terms': 'terms',
     };
     setActiveSection(sectionMap[itemId] || 'overview');
   };
@@ -630,7 +635,7 @@ export function UnifiedDashboard({
             </div>
 
             {/* Activity Summary */}
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+            <div className="glass-card p-6 mb-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <h3 className="text-sm font-black uppercase tracking-wide mb-4" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                 Activity Summary
               </h3>
@@ -642,6 +647,52 @@ export function UnifiedDashboard({
                   </p>
                 </div>
                 <div className="p-4 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <p className="text-[10px] font-bold uppercase text-red-400 mb-2">Sent</p>
+                  <p className="text-lg font-black text-red-400">
+                    {walletData.transactions.filter(tx => tx.type === 'sent').length} txns
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <p className="text-[10px] font-bold uppercase text-cyan-400 mb-2">Total Volume</p>
+                  <p className="text-lg font-black text-cyan-400">
+                    {walletData.transactions.reduce((acc, tx) => acc + tx.amount, 0).toFixed(2)} π
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Legal & Info Links */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button 
+                onClick={() => setActiveSection('privacy')}
+                className="p-4 rounded-xl glass-card border border-white/5 hover:border-purple-500/40 transition-all flex flex-col items-center gap-2 group"
+              >
+                <div className="p-3 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-all">
+                  <Lock className="w-5 h-5 text-purple-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-white">Privacy Policy</span>
+              </button>
+              <button 
+                onClick={() => setActiveSection('terms')}
+                className="p-4 rounded-xl glass-card border border-white/5 hover:border-cyan-500/40 transition-all flex flex-col items-center gap-2 group"
+              >
+                <div className="p-3 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-all">
+                  <FileText className="w-5 h-5 text-cyan-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-white">Terms of Service</span>
+              </button>
+              <button 
+                onClick={() => setActiveSection('help')}
+                className="p-4 rounded-xl glass-card border border-white/5 hover:border-emerald-500/40 transition-all flex flex-col items-center gap-2 group"
+              >
+                <div className="p-3 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-all">
+                  <HelpCircle className="w-5 h-5 text-emerald-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-wider text-white">Help Center</span>
+              </button>
+            </div>
+          </div>
+        )}
                   <p className="text-[10px] font-bold uppercase text-red-400 mb-2">Sent</p>
                   <p className="text-lg font-black text-red-400">
                     {walletData.transactions.filter(tx => tx.type === 'sent').length} txns

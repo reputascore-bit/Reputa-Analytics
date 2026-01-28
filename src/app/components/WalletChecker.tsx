@@ -80,7 +80,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative inline-block mb-8"
+          className="relative flex justify-center mb-8"
         >
           <div 
             className="absolute inset-0 rounded-full animate-pulse-glow"

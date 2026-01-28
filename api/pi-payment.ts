@@ -24,14 +24,16 @@ export default async function handler(req: any, res: any) {
     const txid = body.txid?.toString().trim();
     const uid = body.uid; // الـ UID الحقيقي للمستخدم
 
-    // --- تعديل منطق الـ Payout لإصلاح خطأ user_not_found ---
+    // --- تعديل منطق الـ Payout لمعالجة التضارب وضمان التنفيذ الحقيقي ---
     if (action === 'payout') {
       const { address, amount, memo } = body;
-      
-      // ملاحظة: الـ uid هنا يجب أن يكون هو نفسه الـ uid الخاص بالمستخدم المسجل في Pi
-      // إذا لم يتوفر، نستخدم الـ uid القادم من الواجهة الأمامية
-      const targetUid = uid || body.pioneerUid; 
+      const targetUid = uid || body.pioneerUid;
 
+      if (!targetUid) {
+        return res.status(400).json({ error: "User UID is required for payouts" });
+      }
+
+      // 1. طلب إنشاء عملية Payout من خوادم Pi
       const payoutResponse = await fetch(`${PI_API_BASE}/payments`, {
         method: 'POST',
         headers: {
@@ -43,21 +45,33 @@ export default async function handler(req: any, res: any) {
             amount: amount || 0.01,
             memo: memo || "Reward payout",
             metadata: { type: "payout" },
-            uid: targetUid, // تغيير هام: استخدام UID حقيقي للمستخدم وليس نصاً عشوائياً
+            uid: targetUid, 
             recipient_address: address 
           }
         }),
       });
 
       const payoutData = await payoutResponse.json();
+
       if (!payoutResponse.ok) {
-        console.error("[PI-API] Payout Failed:", payoutData);
+        // إذا ظهر خطأ "ongoing payment"، يتم إرسال التفاصيل كاملة للواجهة
+        console.error("[PI-API] Payout Conflict/Error:", payoutData);
         return res.status(payoutResponse.status).json({ error: payoutData });
       }
+
+      // 2. تسجيل الـ identifier في Redis لضمان تتبع المعاملة الحقيقية
+      if (payoutData.identifier) {
+        await redis.set(`last_payout:${targetUid}`, {
+          id: payoutData.identifier,
+          status: 'initiated',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       return res.status(200).json({ success: true, data: payoutData });
     }
 
-    // --- المسار التقليدي (Approve/Complete) ---
+    // --- المسار التقليدي (Approve/Complete) المستخدم في User-to-App ---
     if (!paymentId || !action) return res.status(400).json({ error: "Missing data" });
 
     const url = `${PI_API_BASE}/payments/${paymentId}/${action}`;
@@ -72,6 +86,7 @@ export default async function handler(req: any, res: any) {
 
     const data = await response.json().catch(() => ({}));
     
+    // عند اكتمال الدفع من المستخدم للتطبيق
     if (action === 'complete' && response.ok && uid) {
       await redis.set(`vip_status:${uid}`, 'active');
       await redis.incr('total_successful_payments');

@@ -225,17 +225,6 @@ export function UnifiedDashboard({
     }
   };
 
-  const getBadgeInfo = () => {
-    const scoreVal = levelProgress.displayScore;
-    if (scoreVal >= 8000) return { label: 'Elite Wallet', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', borderColor: 'border-emerald-500/50', icon: '🛡️', glow: 'shadow-emerald-500/30' };
-    if (scoreVal >= 5000) return { label: 'Pioneer Wallet', color: 'text-purple-400', bgColor: 'bg-purple-500/20', borderColor: 'border-purple-500/50', icon: '🚀', glow: 'shadow-purple-500/30' };
-    if (scoreVal >= 3000) return { label: 'Trusted Wallet', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/50', icon: '✅', glow: 'shadow-cyan-500/30' };
-    if (scoreVal >= 1500) return { label: 'Active Wallet', color: 'text-blue-400', bgColor: 'bg-blue-500/20', borderColor: 'border-blue-500/50', icon: '⚡', glow: 'shadow-blue-500/30' };
-    if (scoreVal >= 500) return { label: 'Moderate Trust', color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/50', icon: '⚖️', glow: 'shadow-amber-500/30' };
-    return { label: 'Limited Trust', color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/50', icon: '⚠️', glow: 'shadow-red-500/30' };
-  };
-
-  const badgeInfo = getBadgeInfo();
   const gaugeLevel = mapAtomicToTrustLevel(levelProgress.currentLevel);
 
   const sectionButtons: { id: ActiveSection; icon: React.ElementType; label: string }[] = [
@@ -379,52 +368,39 @@ export function UnifiedDashboard({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
-                <div className="flex items-center gap-1.5 justify-center mb-0.5">
-                  <TrendingUp className="w-3 h-3" style={{ color: trustColors.text }} />
-                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: trustColors.text }}>Reputa</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="text-center px-4 py-3 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
+                <div className="flex items-center gap-1.5 justify-center mb-1">
+                  <TrendingUp className="w-3.5 h-3.5" style={{ color: trustColors.text }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: trustColors.text }}>Reputa</span>
                 </div>
-                <p className="text-xl font-black" style={{ color: trustColors.text }}>{levelProgress.displayScore.toLocaleString()}</p>
+                <p className="text-2xl font-black" style={{ color: trustColors.text }}>{levelProgress.displayScore.toLocaleString()}</p>
               </div>
 
-              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                <div className="flex items-center gap-1.5 justify-center mb-0.5">
-                  <Award className="w-3 h-3 text-purple-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Points</span>
+              <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
+                <div className="flex items-center gap-1.5 justify-center mb-1">
+                  <Coins className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">{t('dashboard.balance')}</span>
                 </div>
-                <p className="text-xl font-black text-purple-400">{userPoints.total.toLocaleString()}</p>
-              </div>
-
-              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
-                <div className="flex items-center gap-1.5 justify-center mb-0.5">
-                  <Coins className="w-3 h-3 text-cyan-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">{t('dashboard.balance')}</span>
-                </div>
-                <p className="text-xl font-black neon-text-cyan">
-                  {(walletData?.balance || 0).toFixed(2)} <span className="text-cyan-400">π</span>
+                <p className="text-2xl font-black neon-text-cyan">
+                  {(walletData?.balance || 0).toFixed(2)} <span className="text-cyan-400 text-sm">π</span>
                 </p>
               </div>
 
-              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex items-center gap-1.5 justify-center mb-0.5">
-                  <Clock className="w-3 h-3 text-emerald-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Age</span>
+              <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div className="flex items-center gap-1.5 justify-center mb-1">
+                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Age</span>
                 </div>
-                <p className="text-xl font-black text-emerald-400">{walletData?.accountAge || 0} <span className="text-gray-500 text-xs">days</span></p>
+                <p className="text-2xl font-black text-emerald-400">{walletData?.accountAge || 0} <span className="text-gray-500 text-sm">days</span></p>
               </div>
 
               <div 
-                className="text-center px-4 py-2.5 rounded-xl"
+                className="text-center px-4 py-3 rounded-xl"
                 style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}
               >
-                <span className="text-[9px] font-bold uppercase tracking-wider block mb-0.5" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Level</span>
-                <p className="text-sm font-black uppercase" style={{ color: trustColors.text }}>{levelProgress.currentLevel}</p>
-              </div>
-
-              <div className={`text-center px-4 py-2.5 rounded-xl ${badgeInfo.bgColor} border ${badgeInfo.borderColor}`}>
-                <span className="text-[9px] font-bold uppercase tracking-wider block mb-0.5" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Status</span>
-                <p className={`text-sm font-black ${badgeInfo.color}`}>{badgeInfo.label}</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Level</span>
+                <p className="text-lg font-black uppercase" style={{ color: trustColors.text }}>{levelProgress.currentLevel}</p>
               </div>
             </div>
           </div>
@@ -482,8 +458,8 @@ export function UnifiedDashboard({
             <TrustGauge 
               score={levelProgress.displayScore} 
               trustLevel={gaugeLevel}
-              consistencyScore={atomicResult.categoryScores?.['Interaction Diversity']?.adjusted ?? walletData.consistencyScore ?? 85}
-              networkTrust={atomicResult.categoryScores?.['Pi Network Specific']?.adjusted ?? walletData.networkTrust ?? 90}
+              consistencyScore={walletData.consistencyScore ?? 85}
+              networkTrust={walletData.networkTrust ?? 90}
             />
 
             {/* Quick Stats Grid */}
@@ -743,9 +719,9 @@ export function UnifiedDashboard({
                     <p className="text-xl font-black text-cyan-400">{walletData.totalTransactions || walletData.transactions.length}</p>
                   </div>
                   
-                  <div className={`p-4 rounded-xl ${badgeInfo.bgColor}`} style={{ border: `1px solid` }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Trust Status</p>
-                    <p className={`text-lg font-black uppercase ${badgeInfo.color}`}>{badgeInfo.icon} {badgeInfo.label}</p>
+                  <div className="p-4 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Trust Level</p>
+                    <p className="text-lg font-black uppercase" style={{ color: trustColors.text }}>{levelProgress.currentLevel}</p>
                   </div>
                 </div>
               </div>
@@ -754,8 +730,8 @@ export function UnifiedDashboard({
             <TrustGauge 
               score={levelProgress.displayScore} 
               trustLevel={gaugeLevel}
-              consistencyScore={atomicResult.categoryScores?.['Interaction Diversity']?.adjusted ?? walletData.consistencyScore ?? 85}
-              networkTrust={atomicResult.categoryScores?.['Pi Network Specific']?.adjusted ?? walletData.networkTrust ?? 90}
+              consistencyScore={walletData.consistencyScore ?? 85}
+              networkTrust={walletData.networkTrust ?? 90}
             />
           </div>
         )}

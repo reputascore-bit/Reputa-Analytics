@@ -252,6 +252,8 @@ function ReputaAppContent() {
         onBack={() => setShowAnalyticsDashboard(false)}
         walletBalance={walletData?.balance || 0}
         username={currentUser?.username}
+        walletAddress={walletData?.address}
+        reputaScore={walletData?.reputaScore || 0}
       />
     );
   }

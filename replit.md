@@ -56,6 +56,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Improved homepage layout with better logo proportions and professional fonts
+- January 28, 2026: Updated Analytics Dashboard with futuristic theme (purple/cyan accents, glassmorphism)
+- January 28, 2026: Added pioneer profile section with username, wallet address, and score display
+- January 28, 2026: Enhanced sidebar with neon accents and futuristic styling
 - January 28, 2026: Fixed sidebar navigation ID mismatch and added full i18n support for sidebar labels
 - January 28, 2026: Added Analytics Dashboard with Figma-designed charts (TransactionTimeline, PointsBreakdown, RiskActivity, TokenPortfolio)
 - January 28, 2026: Created multi-language support system (EN, AR, FR, ZH) with RTL support

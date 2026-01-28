@@ -55,19 +55,19 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
 
   return (
     <div className="relative">
-      <div className="text-center mb-12">
+      <div className="text-center mb-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full mb-8"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full mb-6"
           style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.15) 100%)',
             border: '1px solid rgba(139, 92, 246, 0.3)',
           }}
         >
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" style={{ boxShadow: '0 0 10px #10B981' }} />
-          <span className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.9)' }}>
+          <span className="text-[11px] font-bold uppercase tracking-[0.25em]" style={{ color: 'rgba(255,255,255,0.9)' }}>
             Reputation Protocol • Live
           </span>
         </motion.div>
@@ -76,29 +76,29 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative inline-block mb-8"
+          className="relative inline-block mb-6"
         >
           <div 
-            className="absolute inset-0 rounded-3xl animate-pulse-glow"
+            className="absolute inset-0 rounded-2xl animate-pulse-glow"
             style={{
               background: 'radial-gradient(circle, rgba(0, 217, 255, 0.3) 0%, transparent 70%)',
-              filter: 'blur(30px)',
-              transform: 'scale(1.5)',
+              filter: 'blur(25px)',
+              transform: 'scale(1.4)',
             }}
           />
           <div 
-            className="relative p-6 rounded-3xl"
+            className="relative p-5 rounded-2xl"
             style={{
-              background: 'linear-gradient(135deg, rgba(15, 17, 23, 0.9) 0%, rgba(30, 33, 40, 0.8) 100%)',
-              border: '1px solid rgba(0, 217, 255, 0.3)',
-              boxShadow: '0 0 60px rgba(0, 217, 255, 0.2), inset 0 0 30px rgba(0, 217, 255, 0.05)',
+              background: 'linear-gradient(135deg, rgba(15, 17, 23, 0.95) 0%, rgba(30, 33, 40, 0.85) 100%)',
+              border: '1px solid rgba(0, 217, 255, 0.25)',
+              boxShadow: '0 0 50px rgba(0, 217, 255, 0.15), inset 0 0 25px rgba(0, 217, 255, 0.03)',
             }}
           >
             <img 
               src={logoImage} 
               alt="Reputa Score" 
-              className="w-28 h-28 object-contain animate-float"
-              style={{ filter: 'drop-shadow(0 0 20px rgba(0, 217, 255, 0.5))' }}
+              className="w-24 h-24 object-contain animate-float"
+              style={{ filter: 'drop-shadow(0 0 15px rgba(0, 217, 255, 0.4))' }}
             />
           </div>
         </motion.div>
@@ -107,17 +107,20 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-5xl md:text-6xl font-black mb-4 tracking-tight"
-          style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+          className="text-4xl md:text-5xl font-black mb-3 tracking-tight uppercase"
+          style={{ 
+            color: 'rgba(255, 255, 255, 0.98)',
+            letterSpacing: '-0.02em',
+          }}
         >
-          SCAN ANY WALLET
+          Scan Any Wallet
         </motion.h1>
 
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-2xl md:text-3xl font-bold mb-6 animated-gradient-text"
+          className="text-xl md:text-2xl font-semibold mb-5 animated-gradient-text"
         >
           Decode Wallet Behavior
         </motion.h2>
@@ -126,8 +129,8 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-lg max-w-xl mx-auto mb-2"
-          style={{ color: 'rgba(160, 164, 184, 0.9)' }}
+          className="text-base max-w-lg mx-auto mb-3"
+          style={{ color: 'rgba(160, 164, 184, 0.85)' }}
         >
           Discover what your Pi Network wallet reveals about trust, consistency, and reputation.
         </motion.p>
@@ -141,12 +144,12 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         >
           <span className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-cyan-400" />
-            Advanced on-chain intelligence
+            <span className="text-[12px]">Advanced on-chain intelligence</span>
           </span>
           <span className="w-1 h-1 rounded-full bg-gray-600" />
           <span className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-purple-400" />
-            No private keys required
+            <span className="text-[12px]">No private keys required</span>
           </span>
         </motion.div>
       </div>
@@ -267,7 +270,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 1 }}
-        className="grid md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto"
+        className="grid md:grid-cols-3 gap-5 mt-10 max-w-3xl mx-auto"
       >
         {features.map((feature, index) => (
           <motion.div
@@ -275,18 +278,18 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 1.1 + index * 0.1 }}
-            className="kpi-card text-center group cursor-default"
+            className="kpi-card text-center group cursor-default py-6"
           >
             <div 
-              className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-gradient-to-br ${feature.color} transition-transform group-hover:scale-110`}
-              style={{ boxShadow: '0 8px 32px rgba(139, 92, 246, 0.25)' }}
+              className={`w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3 bg-gradient-to-br ${feature.color} transition-transform group-hover:scale-110`}
+              style={{ boxShadow: '0 6px 24px rgba(139, 92, 246, 0.2)' }}
             >
-              <feature.icon className="w-8 h-8 text-white" />
+              <feature.icon className="w-7 h-7 text-white" />
             </div>
-            <h3 className="font-bold text-lg mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+            <h3 className="font-bold text-base mb-1.5" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
               {feature.label}
             </h3>
-            <p className="text-sm" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
+            <p className="text-[13px]" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
               {feature.description}
             </p>
           </motion.div>
@@ -297,11 +300,11 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 1.4 }}
-        className="text-center mt-16"
+        className="text-center mt-12"
       >
-        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+        <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
           <Sparkles className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-medium" style={{ color: 'rgba(16, 185, 129, 0.9)' }}>
+          <span className="text-[13px] font-medium" style={{ color: 'rgba(16, 185, 129, 0.9)' }}>
             Powered by Pi Network Blockchain
           </span>
           <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />

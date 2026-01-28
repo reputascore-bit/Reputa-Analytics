@@ -13,6 +13,7 @@ import {
   TestTube,
   Zap
 } from 'lucide-react';
+import logoImage from '../../assets/logo.png';
 
 interface SidebarProps {
   mode: AppMode;
@@ -47,35 +48,75 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
   };
 
   return (
-    <aside className="bg-[#111] w-[257px] min-h-screen rounded-[15px] p-6 flex flex-col border border-white/10">
-      <div className="mb-8">
-        <h2 className="font-black italic text-[30px] text-white">
+    <aside 
+      className="w-[260px] min-h-screen p-6 flex flex-col relative z-20"
+      style={{
+        background: 'linear-gradient(180deg, rgba(15, 17, 23, 0.95) 0%, rgba(10, 11, 15, 0.98) 100%)',
+        borderRight: '1px solid rgba(139, 92, 246, 0.15)',
+        backdropFilter: 'blur(20px)',
+      }}
+    >
+      <div className="mb-8 flex items-center gap-3">
+        <div className="relative">
+          <div 
+            className="absolute inset-0 rounded-xl"
+            style={{ 
+              background: 'radial-gradient(circle, rgba(0, 217, 255, 0.3) 0%, transparent 70%)',
+              filter: 'blur(8px)',
+            }}
+          />
+          <img 
+            src={logoImage} 
+            alt="logo" 
+            className="relative w-10 h-10"
+            style={{ filter: 'drop-shadow(0 0 8px rgba(0, 217, 255, 0.4))' }}
+          />
+        </div>
+        <h2 className="font-black text-xl uppercase tracking-tight neon-text-cyan">
           Reputa Score
         </h2>
       </div>
 
       <button
         onClick={onModeToggle}
-        className="mb-8 w-full bg-black rounded-lg p-4 hover:bg-[#1a1a1a] transition-colors border border-[#222] hover:border-[#FAC515]"
+        className="mb-8 w-full rounded-xl p-4 transition-all active:scale-98"
+        style={{
+          background: mode.mode === 'demo' 
+            ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 217, 255, 0.1) 100%)'
+            : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(0, 217, 255, 0.1) 100%)',
+          border: mode.mode === 'demo' 
+            ? '1px solid rgba(139, 92, 246, 0.3)'
+            : '1px solid rgba(16, 185, 129, 0.3)',
+        }}
       >
         <div className="flex items-center gap-3">
           {mode.mode === 'demo' ? (
             <>
-              <TestTube className="w-5 h-5 text-[#FAC515]" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(139, 92, 246, 0.2)' }}
+              >
+                <TestTube className="w-5 h-5 text-purple-400" />
+              </div>
               <div className="text-left flex-1">
-                <p className="text-white font-medium text-sm">{t('app.mode.demo')}</p>
-                <p className="text-gray-500 text-xs">Click to switch to Testnet</p>
+                <p className="font-bold text-sm neon-text-purple">{t('app.mode.demo')}</p>
+                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>Click to switch</p>
               </div>
             </>
           ) : (
             <>
-              <Zap className="w-5 h-5 text-[#10b981]" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(16, 185, 129, 0.2)' }}
+              >
+                <Zap className="w-5 h-5 text-emerald-400" />
+              </div>
               <div className="text-left flex-1">
-                <p className="text-white font-medium text-sm">{t('app.mode.testnet')}</p>
-                <p className="text-gray-500 text-xs">Connected to Pi Network</p>
+                <p className="font-bold text-sm" style={{ color: '#10B981' }}>{t('app.mode.testnet')}</p>
+                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>Connected</p>
               </div>
               {mode.connected && (
-                <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: '0 0 10px #10B981' }} />
               )}
             </>
           )}
@@ -84,7 +125,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
 
       <nav className="flex-1 space-y-8">
         <div>
-          <p className="font-medium text-[#a5a5a5] text-[13px] mb-4 uppercase">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: 'rgba(139, 92, 246, 0.7)' }}>
             {t('sidebar.section.pages')}
           </p>
           <div className="space-y-1">
@@ -92,14 +133,18 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
               <button
                 key={item.id}
                 onClick={() => handleClick(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   activeItem === item.id
-                    ? 'bg-black shadow-lg border border-[#FAC515]/30'
-                    : 'hover:bg-[#1a1a1a]'
+                    ? 'neon-glow-purple'
+                    : 'hover:bg-white/5'
                 }`}
+                style={activeItem === item.id ? {
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.1) 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                } : {}}
               >
-                <item.icon className="w-5 h-5 text-white" />
-                <span className="text-[13px] text-white">
+                <item.icon className={`w-5 h-5 ${activeItem === item.id ? 'text-purple-400' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium ${activeItem === item.id ? 'text-white' : 'text-gray-400'}`}>
                   {t(item.labelKey)}
                 </span>
               </button>
@@ -108,7 +153,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
         </div>
 
         <div>
-          <p className="font-medium text-[#adb8b8] text-[13px] mb-4 uppercase">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: 'rgba(0, 217, 255, 0.7)' }}>
             {t('sidebar.section.transaction')}
           </p>
           <div className="space-y-1">
@@ -116,14 +161,18 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
               <button
                 key={item.id}
                 onClick={() => handleClick(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   activeItem === item.id
-                    ? 'bg-black shadow-lg border border-[#FAC515]/30'
-                    : 'hover:bg-[#1a1a1a]'
+                    ? 'neon-glow-cyan'
+                    : 'hover:bg-white/5'
                 }`}
+                style={activeItem === item.id ? {
+                  background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(139, 92, 246, 0.1) 100%)',
+                  border: '1px solid rgba(0, 217, 255, 0.4)',
+                } : {}}
               >
-                <item.icon className="w-5 h-5 text-white" />
-                <span className="text-[13px] text-white">
+                <item.icon className={`w-5 h-5 ${activeItem === item.id ? 'text-cyan-400' : 'text-gray-400'}`} />
+                <span className={`text-sm font-medium ${activeItem === item.id ? 'text-white' : 'text-gray-400'}`}>
                   {t(item.labelKey)}
                 </span>
               </button>
@@ -132,7 +181,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
         </div>
 
         <div>
-          <p className="font-medium text-[#a5a5a5] text-[13px] mb-4 uppercase">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: 'rgba(160, 164, 184, 0.5)' }}>
             {t('sidebar.section.tools')}
           </p>
           <div className="space-y-1">
@@ -140,14 +189,18 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
               <button
                 key={item.id}
                 onClick={() => handleClick(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   activeItem === item.id
-                    ? 'bg-black shadow-lg border border-[#FAC515]/30'
-                    : 'hover:bg-[#1a1a1a]'
+                    ? ''
+                    : 'hover:bg-white/5'
                 }`}
+                style={activeItem === item.id ? {
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                } : {}}
               >
-                <item.icon className="w-5 h-5 text-white" />
-                <span className="text-[13px] text-white">
+                <item.icon className={`w-5 h-5 ${activeItem === item.id ? 'text-white' : 'text-gray-500'}`} />
+                <span className={`text-sm font-medium ${activeItem === item.id ? 'text-white' : 'text-gray-500'}`}>
                   {t(item.labelKey)}
                 </span>
               </button>
@@ -155,6 +208,18 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
           </div>
         </div>
       </nav>
+
+      <div 
+        className="mt-6 p-4 rounded-xl text-center"
+        style={{
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 217, 255, 0.1) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+        }}
+      >
+        <p className="text-[9px] font-bold uppercase tracking-wider" style={{ color: 'rgba(160, 164, 184, 0.5)' }}>
+          Reputa Score v2
+        </p>
+      </div>
     </aside>
   );
 }

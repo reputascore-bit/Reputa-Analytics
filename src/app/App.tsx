@@ -7,7 +7,7 @@ import { UnifiedDashboard } from './pages/UnifiedDashboard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
-import logoImage from '../assets/logo.png';
+import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
@@ -293,7 +293,7 @@ function ReputaAppContent() {
             <img 
               src={logoImage} 
               alt="logo" 
-              className="relative w-10 h-10 cursor-pointer active:scale-90 transition-transform" 
+              className="relative w-9 h-9 cursor-pointer active:scale-90 transition-transform object-contain" 
               style={{ filter: 'drop-shadow(0 0 8px rgba(0, 217, 255, 0.4))' }}
               onClick={() => setLogoClickCount(prev => prev + 1)}
             />

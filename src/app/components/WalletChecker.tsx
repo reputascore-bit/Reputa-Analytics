@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Shield, Zap, Activity, Globe, Cpu, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
-import logoImage from '../../assets/logo.png';
+import logoImage from '../../assets/logo-new.png';
 
 interface WalletCheckerProps {
   onCheck: (address: string) => void;
@@ -86,19 +86,14 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
               transform: 'scale(1.4)',
             }}
           />
-          <div 
-            className="relative p-5 rounded-2xl"
-            style={{
-              background: 'linear-gradient(135deg, rgba(15, 17, 23, 0.95) 0%, rgba(30, 33, 40, 0.85) 100%)',
-              border: '1px solid rgba(0, 217, 255, 0.25)',
-              boxShadow: '0 0 50px rgba(0, 217, 255, 0.15), inset 0 0 25px rgba(0, 217, 255, 0.03)',
-            }}
-          >
+          <div className="relative">
             <img 
               src={logoImage} 
               alt="Reputa Score" 
-              className="w-24 h-24 object-contain animate-float"
-              style={{ filter: 'drop-shadow(0 0 15px rgba(0, 217, 255, 0.4))' }}
+              className="w-32 h-32 object-contain animate-float"
+              style={{ 
+                filter: 'drop-shadow(0 0 20px rgba(0, 217, 255, 0.5)) drop-shadow(0 0 40px rgba(139, 92, 246, 0.3))',
+              }}
             />
           </div>
         </motion.div>

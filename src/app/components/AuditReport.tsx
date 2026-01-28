@@ -3,7 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import type { WalletData } from '../protocol/types';
-import logoImage from '../../assets/logo.png';
+import logoImage from '../../assets/logo-new.png';
 
 interface AuditReportProps {
   walletData: WalletData;

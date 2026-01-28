@@ -14,9 +14,10 @@ import {
   Zap,
   PieChart,
   Shield,
-  Wallet
+  Wallet,
+  User
 } from 'lucide-react';
-import logoImage from '../../assets/logo.png';
+import logoImage from '../../assets/logo-new.png';
 
 interface SidebarProps {
   mode: AppMode;
@@ -38,6 +39,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
   const transactionItems = [
     { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
     { icon: Wallet, labelKey: 'sidebar.wallet', id: 'wallet' },
+    { icon: User, labelKey: 'sidebar.profile', id: 'profile' },
   ];
 
   const toolsItems = [
@@ -71,7 +73,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
           <img 
             src={logoImage} 
             alt="logo" 
-            className="relative w-10 h-10"
+            className="relative w-9 h-9 object-contain"
             style={{ filter: 'drop-shadow(0 0 8px rgba(0, 217, 255, 0.4))' }}
           />
         </div>

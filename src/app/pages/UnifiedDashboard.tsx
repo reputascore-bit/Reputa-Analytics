@@ -22,7 +22,8 @@ import {
   ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
   PieChart, LineChart, AlertTriangle, Coins, RefreshCw, Lock,
-  Languages, ChevronDown, Calendar, CheckCircle, Award, Star
+  Languages, ChevronDown, Calendar, CheckCircle, Award, Star,
+  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -247,7 +248,7 @@ export function UnifiedDashboard({
                   <TrendingUp className="w-3 h-3 text-purple-400" />
                   <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Score</span>
                 </div>
-                <p className="text-xl font-black neon-text-purple">{walletData.reputaScore}<span className="text-gray-500 text-xs">/1000</span></p>
+                <p className="text-xl font-black neon-text-purple">{walletData?.reputaScore || 0}<span className="text-gray-500 text-xs">/1000</span></p>
               </div>
 
               <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
@@ -256,7 +257,7 @@ export function UnifiedDashboard({
                   <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">{t('dashboard.balance')}</span>
                 </div>
                 <p className="text-xl font-black neon-text-cyan">
-                  {walletData.balance.toFixed(2)} <span className="text-cyan-400">π</span>
+                  {(walletData?.balance || 0).toFixed(2)} <span className="text-cyan-400">π</span>
                 </p>
               </div>
 
@@ -265,7 +266,7 @@ export function UnifiedDashboard({
                   <Clock className="w-3 h-3 text-emerald-400" />
                   <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Age</span>
                 </div>
-                <p className="text-xl font-black text-emerald-400">{walletData.accountAge} <span className="text-gray-500 text-xs">days</span></p>
+                <p className="text-xl font-black text-emerald-400">{walletData?.accountAge || 0} <span className="text-gray-500 text-xs">days</span></p>
               </div>
 
               <div className={`text-center px-4 py-2.5 rounded-xl ${badgeInfo.bgColor} ${badgeInfo.borderColor} border`}>
@@ -315,7 +316,7 @@ export function UnifiedDashboard({
                   </div>
                   <div>
                     <p className="text-[9px] font-bold text-gray-400 uppercase">Total Tx</p>
-                    <p className="font-bold text-white">{walletData.totalTransactions || 0}</p>
+                    <p className="font-bold text-white">{walletData?.totalTransactions || 0}</p>
                   </div>
                 </div>
               </div>
@@ -371,9 +372,9 @@ export function UnifiedDashboard({
                 </button>
               </div>
               <TransactionList 
-                transactions={walletData.transactions.slice(0, 4)} 
-                walletAddress={walletData.address} 
-              />
+              transactions={walletData?.transactions?.slice(0, 4) || []} 
+              walletAddress={walletData?.address || ''} 
+            />
             </div>
           </div>
         )}
@@ -408,9 +409,9 @@ export function UnifiedDashboard({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <TransactionList 
-                transactions={walletData.transactions} 
-                walletAddress={walletData.address} 
-              />
+              transactions={walletData?.transactions || []} 
+              walletAddress={walletData?.address || ''} 
+            />
             </div>
           </div>
         )}
@@ -420,7 +421,7 @@ export function UnifiedDashboard({
             <AuditReport 
               walletData={{
                 ...walletData,
-                transactions: walletData.transactions
+                transactions: walletData?.transactions || []
               }} 
               isProUser={isProUser} 
               onUpgradePrompt={onUpgradePrompt}
@@ -643,19 +644,19 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <p className="text-[10px] font-bold uppercase text-emerald-400 mb-2">Received</p>
                   <p className="text-lg font-black text-emerald-400">
-                    {walletData.transactions.filter(tx => tx.type === 'received').length} txns
+                    {walletData?.transactions?.filter(tx => tx.type === 'received').length || 0} txns
                   </p>
                 </div>
                 <div className="p-4 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                   <p className="text-[10px] font-bold uppercase text-red-400 mb-2">Sent</p>
                   <p className="text-lg font-black text-red-400">
-                    {walletData.transactions.filter(tx => tx.type === 'sent').length} txns
+                    {walletData?.transactions?.filter(tx => tx.type === 'sent').length || 0} txns
                   </p>
                 </div>
                 <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                   <p className="text-[10px] font-bold uppercase text-cyan-400 mb-2">Total Volume</p>
                   <p className="text-lg font-black text-cyan-400">
-                    {walletData.transactions.reduce((acc, tx) => acc + tx.amount, 0).toFixed(2)} π
+                    {(walletData?.transactions?.reduce((acc, tx) => acc + tx.amount, 0) || 0).toFixed(2)} π
                   </p>
                 </div>
               </div>

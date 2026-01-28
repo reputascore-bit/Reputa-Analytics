@@ -2,7 +2,14 @@
  */
 
 export function isPiBrowser(): boolean {
-  return typeof window !== 'undefined' && 'Pi' in window;
+  if (typeof window === 'undefined') return false;
+  
+  // Use a combination of checks to ensure we are truly in the Pi Browser environment
+  const isPiUA = /PiBrowser/i.test(navigator.userAgent);
+  const hasPi = 'Pi' in window;
+  
+  // If we have the script but not the UA, we're likely in a standard browser
+  return hasPi && isPiUA;
 }
 
 /**

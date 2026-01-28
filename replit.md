@@ -56,6 +56,9 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Added Settings, Feedback, and Help pages with futuristic styling
+- January 28, 2026: Added Privacy Policy and Terms of Service sections in Profile
+- January 28, 2026: Centered homepage logo with improved layout
 - January 28, 2026: PROFESSIONAL REDESIGN - Added Inter, Space Grotesk, JetBrains Mono fonts
 - January 28, 2026: Fixed logo background using mix-blend-mode and dark container
 - January 28, 2026: Improved header and sidebar with consistent styling

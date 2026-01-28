@@ -693,27 +693,119 @@ export function UnifiedDashboard({
             </div>
           </div>
         )}
-                  <p className="text-[10px] font-bold uppercase text-red-400 mb-2">Sent</p>
-                  <p className="text-lg font-black text-red-400">
-                    {walletData.transactions.filter(tx => tx.type === 'sent').length} txns
-                  </p>
+
+        {activeSection === 'settings' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <Settings className="w-6 h-6 text-purple-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">Settings</h2>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">Dark Mode</p>
+                    <p className="text-[10px] text-gray-400">System preference enabled</p>
+                  </div>
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
+                  </div>
                 </div>
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                  <p className="text-[10px] font-bold uppercase text-purple-400 mb-2">Total Volume</p>
-                  <p className="text-lg font-black text-purple-400">
-                    {walletData.transactions.reduce((sum, tx) => sum + tx.amount, 0).toFixed(2)} π
-                  </p>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">Push Notifications</p>
+                    <p className="text-[10px] text-gray-400">Receive alerts for important activity</p>
+                  </div>
+                  <div className="w-12 h-6 bg-gray-700 rounded-full relative">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Trust Gauge */}
-            <TrustGauge 
-              score={walletData.reputaScore ?? 500} 
-              trustLevel={walletData.trustLevel ?? 'Medium'}
-              consistencyScore={walletData.consistencyScore ?? 85}
-              networkTrust={walletData.networkTrust ?? 90}
-            />
+        {activeSection === 'feedback' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <MessageSquare className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">Feedback</h2>
+              </div>
+              <p className="text-sm text-gray-400 mb-6">Your feedback helps us improve Reputa Score. Tell us what you think!</p>
+              <textarea 
+                className="w-full h-32 p-4 rounded-xl bg-black/40 border border-white/10 text-white text-sm outline-none focus:border-cyan-500/50 transition-all mb-4"
+                placeholder="Share your thoughts or report an issue..."
+              />
+              <button className="futuristic-button w-full py-3 text-xs font-bold uppercase tracking-widest">Submit Feedback</button>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'help' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <HelpCircle className="w-6 h-6 text-emerald-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">Help Center</h2>
+              </div>
+              <div className="space-y-4">
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    What is Reputa Score?
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed">
+                    Reputa Score is an advanced AI-powered reputation protocol for the Pi Network. It analyzes on-chain behavior to determine wallet trustworthiness.
+                  </div>
+                </details>
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    How is my score calculated?
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed">
+                    The score is based on transaction volume, account age, consistency of activity, and network trust factors. Higher scores indicate greater reliability.
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'privacy' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <Lock className="w-6 h-6 text-purple-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">Privacy Policy</h2>
+              </div>
+              <div className="prose prose-invert max-w-none text-xs text-gray-400 space-y-4 font-sans leading-relaxed">
+                <p>Reputa Score respects your privacy. We only analyze public blockchain data from the Pi Network.</p>
+                <h4 className="text-white font-bold uppercase mt-6">Data Collection</h4>
+                <p>We do not collect private keys, passphrases, or personal identifying information. Only public wallet addresses are processed for analysis.</p>
+                <h4 className="text-white font-bold uppercase mt-6">Data Usage</h4>
+                <p>Wallet data is used exclusively to generate reputation scores and analytical reports within the application.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'terms' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">Terms of Service</h2>
+              </div>
+              <div className="prose prose-invert max-w-none text-xs text-gray-400 space-y-4 font-sans leading-relaxed">
+                <p>By using Reputa Score, you agree to the following terms:</p>
+                <h4 className="text-white font-bold uppercase mt-6">Acceptable Use</h4>
+                <p>Users must not attempt to manipulate scores or scrape data through automated means.</p>
+                <h4 className="text-white font-bold uppercase mt-6">Disclaimer</h4>
+                <p>Reputa Score provides information based on blockchain analysis. It is not financial advice. Scores are for informational purposes only.</p>
+              </div>
+            </div>
           </div>
         )}
       </main>

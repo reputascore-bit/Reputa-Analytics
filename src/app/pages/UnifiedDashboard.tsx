@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { TransactionTimeline } from '../components/charts/TransactionTimeline';
@@ -25,7 +25,14 @@ import {
   processTokenPortfolio,
   generateMockChartData 
 } from '../services/chartDataProcessor';
-import { AppMode, ChartDataPoint, ChartReputationScore, TokenBalance, Language, WalletData } from '../protocol/types';
+import { AppMode, ChartDataPoint, ChartReputationScore, TokenBalance, Language, WalletData, TrustLevel, AtomicTrustLevel } from '../protocol/types';
+import { 
+  calculateAtomicReputation, 
+  generateDemoActivityData, 
+  getLevelProgress,
+  TRUST_LEVEL_COLORS,
+  getBackendScoreCap
+} from '../protocol/atomicScoring';
 import { 
   ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
@@ -59,27 +66,38 @@ export function UnifiedDashboard({
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   const [userPoints, setUserPoints] = useState(() => {
+    const defaultPoints = {
+      total: walletData.reputaScore || 0,
+      checkIn: 0,
+      transactions: 0,
+      activity: 0,
+      streak: 0,
+    };
+    
+    const validatePoints = (pts: Record<string, unknown>) => ({
+      total: typeof pts.total === 'number' && !isNaN(pts.total) ? pts.total : defaultPoints.total,
+      checkIn: typeof pts.checkIn === 'number' && !isNaN(pts.checkIn) ? pts.checkIn : 0,
+      transactions: typeof pts.transactions === 'number' && !isNaN(pts.transactions) ? pts.transactions : 0,
+      activity: typeof pts.activity === 'number' && !isNaN(pts.activity) ? pts.activity : 0,
+      streak: typeof pts.streak === 'number' && !isNaN(pts.streak) ? pts.streak : 0,
+    });
+    
     const savedPoints = localStorage.getItem('userPointsState');
     if (savedPoints) {
       try {
-        return JSON.parse(savedPoints);
+        const parsed = JSON.parse(savedPoints);
+        return validatePoints(parsed);
       } catch {
-        return {
-          total: walletData.reputaScore || 0,
-          checkIn: 0,
-          transactions: 0,
-          activity: 0,
-          streak: 0,
-        };
+        return defaultPoints;
       }
     }
     const checkInData = localStorage.getItem('dailyCheckInState');
     if (checkInData) {
       try {
         const parsed = JSON.parse(checkInData);
-        const checkInPts = parsed.totalPointsFromCheckIn || 0;
-        const adPts = parsed.totalPointsFromAds || 0;
-        const streakPts = parsed.streakBonusPoints || 0;
+        const checkInPts = Number(parsed.totalPointsFromCheckIn) || 0;
+        const adPts = Number(parsed.totalPointsFromAds) || 0;
+        const streakPts = Number(parsed.streakBonusPoints) || 0;
         return {
           total: (walletData.reputaScore || 0) + checkInPts + adPts + streakPts,
           checkIn: checkInPts,
@@ -88,13 +106,7 @@ export function UnifiedDashboard({
           streak: streakPts,
         };
       } catch {
-        return {
-          total: walletData.reputaScore || 0,
-          checkIn: 0,
-          transactions: 0,
-          activity: 0,
-          streak: 0,
-        };
+        return defaultPoints;
       }
     }
     return {
@@ -138,6 +150,23 @@ export function UnifiedDashboard({
     setScore(mockScore);
     setTokens(mockTokens);
   }, [period]);
+
+  const atomicResult = useMemo(() => {
+    const demoData = generateDemoActivityData();
+    demoData.accountAgeDays = walletData.accountAge || 180;
+    demoData.internalTxCount = walletData.transactions?.length || 25;
+    demoData.dailyCheckins = 0;
+    demoData.adBonuses = 0;
+    return calculateAtomicReputation(demoData);
+  }, [walletData.accountAge, walletData.transactions?.length]);
+
+  const levelProgress = useMemo(() => {
+    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
+    return getLevelProgress(atomicResult.adjustedScore + earnedPoints);
+  }, [atomicResult.adjustedScore, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+
+  const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
+  const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
 
   const handleModeToggle = () => {
     setMode(prev => ({
@@ -183,15 +212,31 @@ export function UnifiedDashboard({
     return address;
   };
 
+  const mapAtomicToTrustLevel = (atomicLevel: AtomicTrustLevel): TrustLevel => {
+    switch (atomicLevel) {
+      case 'Elite': return 'Elite';
+      case 'Pioneer+':
+      case 'Trusted': return 'High';
+      case 'Active':
+      case 'Medium': return 'Medium';
+      case 'Low Trust':
+      case 'Very Low Trust': return 'Low';
+      default: return 'Medium';
+    }
+  };
+
   const getBadgeInfo = () => {
-    const scoreVal = walletData.reputaScore || 0;
-    if (scoreVal >= 600) return { label: 'Elite Wallet', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', borderColor: 'border-emerald-500/50', icon: '🛡️', glow: 'shadow-emerald-500/30' };
-    if (scoreVal >= 400) return { label: 'Trusted Wallet', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/50', icon: '✅', glow: 'shadow-cyan-500/30' };
-    if (scoreVal >= 200) return { label: 'Moderate Trust', color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/50', icon: '⚖️', glow: 'shadow-amber-500/30' };
+    const scoreVal = levelProgress.displayScore;
+    if (scoreVal >= 8000) return { label: 'Elite Wallet', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', borderColor: 'border-emerald-500/50', icon: '🛡️', glow: 'shadow-emerald-500/30' };
+    if (scoreVal >= 5000) return { label: 'Pioneer Wallet', color: 'text-purple-400', bgColor: 'bg-purple-500/20', borderColor: 'border-purple-500/50', icon: '🚀', glow: 'shadow-purple-500/30' };
+    if (scoreVal >= 3000) return { label: 'Trusted Wallet', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/50', icon: '✅', glow: 'shadow-cyan-500/30' };
+    if (scoreVal >= 1500) return { label: 'Active Wallet', color: 'text-blue-400', bgColor: 'bg-blue-500/20', borderColor: 'border-blue-500/50', icon: '⚡', glow: 'shadow-blue-500/30' };
+    if (scoreVal >= 500) return { label: 'Moderate Trust', color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/50', icon: '⚖️', glow: 'shadow-amber-500/30' };
     return { label: 'Limited Trust', color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/50', icon: '⚠️', glow: 'shadow-red-500/30' };
   };
 
   const badgeInfo = getBadgeInfo();
+  const gaugeLevel = mapAtomicToTrustLevel(levelProgress.currentLevel);
 
   const sectionButtons: { id: ActiveSection; icon: React.ElementType; label: string }[] = [
     { id: 'overview', icon: BarChart3, label: t('sidebar.dashboard') },
@@ -289,24 +334,42 @@ export function UnifiedDashboard({
           </div>
         </div>
 
-        {/* Pioneer Profile Card */}
-        <div className="glass-card p-5 mb-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+        {/* Pioneer Profile Card with Level Progress */}
+        <div 
+          className="glass-card p-5 mb-6" 
+          style={{ 
+            border: `1px solid ${trustColors.border}`,
+            boxShadow: `0 0 30px ${trustColors.bg}`,
+          }}
+        >
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div 
                 className="w-14 h-14 rounded-2xl flex items-center justify-center"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(0, 217, 255, 0.3) 100%)',
-                  border: '1px solid rgba(139, 92, 246, 0.4)',
-                  boxShadow: '0 0 25px rgba(139, 92, 246, 0.2)',
+                  background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.2) 100%)`,
+                  border: `2px solid ${trustColors.border}`,
+                  boxShadow: `0 0 25px ${trustColors.bg}`,
                 }}
               >
-                <User className="w-7 h-7 text-purple-400" />
+                <User className="w-7 h-7" style={{ color: trustColors.text }} />
               </div>
               <div>
-                <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
-                  {username || 'Pioneer'}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                    {username || 'Pioneer'}
+                  </h2>
+                  <span 
+                    className="px-2 py-0.5 rounded text-[9px] font-black uppercase"
+                    style={{ 
+                      background: trustColors.bg, 
+                      border: `1px solid ${trustColors.border}`,
+                      color: trustColors.text,
+                    }}
+                  >
+                    Lv.{levelProgress.levelIndex + 1}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <Wallet className="w-3 h-3 text-cyan-400" />
                   <span className="font-mono text-sm" style={{ color: 'rgba(0, 217, 255, 0.9)' }}>
@@ -317,12 +380,20 @@ export function UnifiedDashboard({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
+                <div className="flex items-center gap-1.5 justify-center mb-0.5">
+                  <TrendingUp className="w-3 h-3" style={{ color: trustColors.text }} />
+                  <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: trustColors.text }}>Reputa</span>
+                </div>
+                <p className="text-xl font-black" style={{ color: trustColors.text }}>{levelProgress.displayScore.toLocaleString()}</p>
+              </div>
+
               <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
                 <div className="flex items-center gap-1.5 justify-center mb-0.5">
-                  <TrendingUp className="w-3 h-3 text-purple-400" />
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Score</span>
+                  <Award className="w-3 h-3 text-purple-400" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Points</span>
                 </div>
-                <p className="text-xl font-black neon-text-purple">{walletData?.reputaScore || 0}<span className="text-gray-500 text-xs">/1000</span></p>
+                <p className="text-xl font-black text-purple-400">{userPoints.total.toLocaleString()}</p>
               </div>
 
               <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
@@ -343,9 +414,43 @@ export function UnifiedDashboard({
                 <p className="text-xl font-black text-emerald-400">{walletData?.accountAge || 0} <span className="text-gray-500 text-xs">days</span></p>
               </div>
 
-              <div className={`text-center px-4 py-2.5 rounded-xl ${badgeInfo.bgColor} ${badgeInfo.borderColor} border`}>
+              <div 
+                className="text-center px-4 py-2.5 rounded-xl"
+                style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}
+              >
+                <span className="text-[9px] font-bold uppercase tracking-wider block mb-0.5" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Level</span>
+                <p className="text-sm font-black uppercase" style={{ color: trustColors.text }}>{levelProgress.currentLevel}</p>
+              </div>
+
+              <div className={`text-center px-4 py-2.5 rounded-xl ${badgeInfo.bgColor} border ${badgeInfo.borderColor}`}>
                 <span className="text-[9px] font-bold uppercase tracking-wider block mb-0.5" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Status</span>
-                <p className={`text-sm font-black uppercase ${badgeInfo.color}`}>{badgeInfo.icon} {badgeInfo.label}</p>
+                <p className={`text-sm font-black ${badgeInfo.color}`}>{badgeInfo.label}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Level Progress Bar */}
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
+                Level {levelProgress.levelIndex + 1}/7
+              </span>
+              {levelProgress.nextLevel && (
+                <span className="text-[10px] font-medium" style={{ color: trustColors.text }}>
+                  {levelProgress.pointsToNextLevel.toLocaleString()} pts to {levelProgress.nextLevel}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
+                <div 
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{ 
+                    width: `${levelProgress.progressInLevel}%`,
+                    background: `linear-gradient(90deg, ${trustColors.text} 0%, ${trustColors.border} 100%)`,
+                    boxShadow: `0 0 10px ${trustColors.text}`,
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -375,10 +480,10 @@ export function UnifiedDashboard({
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Trust Gauge */}
             <TrustGauge 
-              score={walletData.reputaScore ?? 500} 
-              trustLevel={walletData.trustLevel ?? 'Medium'}
-              consistencyScore={walletData.consistencyScore ?? 85}
-              networkTrust={walletData.networkTrust ?? 90}
+              score={levelProgress.displayScore} 
+              trustLevel={gaugeLevel}
+              consistencyScore={atomicResult.categoryScores?.['Interaction Diversity']?.adjusted ?? walletData.consistencyScore ?? 85}
+              networkTrust={atomicResult.categoryScores?.['Pi Network Specific']?.adjusted ?? walletData.networkTrust ?? 90}
             />
 
             {/* Quick Stats Grid */}
@@ -427,6 +532,56 @@ export function UnifiedDashboard({
                   <div>
                     <p className="text-[9px] font-bold text-gray-400 uppercase">Audit</p>
                     <p className="font-bold text-white">Full Report</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Daily Check-in & Points Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <DailyCheckIn 
+                onPointsEarned={handlePointsEarned}
+                isDemo={mode.mode === 'demo'}
+              />
+              
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
+                        border: '1px solid rgba(139, 92, 246, 0.4)',
+                      }}
+                    >
+                      <Award className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Total Points</p>
+                      <p className="text-2xl font-black text-white">{userPoints.total.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <PointsExplainer 
+                    currentPoints={userPoints.total}
+                    checkInPoints={userPoints.checkIn}
+                    transactionPoints={userPoints.transactions}
+                    activityPoints={userPoints.activity}
+                    streakBonus={userPoints.streak}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                    <p className="text-[9px] font-bold uppercase text-cyan-400">Check-in</p>
+                    <p className="text-sm font-black text-cyan-400">{userPoints.checkIn}</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <p className="text-[9px] font-bold uppercase text-purple-400">Activity</p>
+                    <p className="text-sm font-black text-purple-400">{userPoints.activity}</p>
+                  </div>
+                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <p className="text-[9px] font-bold uppercase text-amber-400">Streak</p>
+                    <p className="text-sm font-black text-amber-400">{userPoints.streak}</p>
                   </div>
                 </div>
               </div>
@@ -597,10 +752,10 @@ export function UnifiedDashboard({
             </div>
 
             <TrustGauge 
-              score={walletData.reputaScore ?? 500} 
-              trustLevel={walletData.trustLevel ?? 'Medium'}
-              consistencyScore={walletData.consistencyScore ?? 85}
-              networkTrust={walletData.networkTrust ?? 90}
+              score={levelProgress.displayScore} 
+              trustLevel={gaugeLevel}
+              consistencyScore={atomicResult.categoryScores?.['Interaction Diversity']?.adjusted ?? walletData.consistencyScore ?? 85}
+              networkTrust={atomicResult.categoryScores?.['Pi Network Specific']?.adjusted ?? walletData.networkTrust ?? 90}
             />
           </div>
         )}

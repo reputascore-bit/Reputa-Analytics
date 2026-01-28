@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Search, Shield, Info, Zap, Globe, BarChart3 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Card } from './ui/card';
+import { Search, Shield, Zap, Activity, Globe, Cpu, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
 import logoImage from '../../assets/logo.png';
 
 interface WalletCheckerProps {
@@ -12,6 +10,7 @@ interface WalletCheckerProps {
 export function WalletChecker({ onCheck }: WalletCheckerProps) {
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,132 +47,266 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
     onCheck('demo');
   };
 
+  const features = [
+    { icon: Shield, label: 'Trust Score', description: 'AI-powered reputation analysis', color: 'from-purple-500 to-violet-600' },
+    { icon: Activity, label: 'Live Analytics', description: 'Real-time transaction monitoring', color: 'from-cyan-500 to-blue-600' },
+    { icon: Globe, label: 'On-Chain Intel', description: 'Deep blockchain intelligence', color: 'from-pink-500 to-rose-600' },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="relative">
       <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 rounded-full border border-purple-200/50 mb-6">
-          <Shield className="w-4 h-4 text-purple-600" />
-          <span className="text-xs font-bold text-purple-700 uppercase tracking-widest">Reputation Protocol</span>
-        </div>
-        
-        <h1 className="text-4xl md:text-5xl font-black mb-4 uppercase tracking-tight">
-          Scan Any Wallet
-        </h1>
-        
-        <div className="inline-flex items-center justify-center mb-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/30 to-purple-600/30 blur-3xl rounded-full scale-150"></div>
-          <div className="relative z-10 p-4 bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl border border-cyan-500/20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full mb-8"
+          style={{
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.15) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+          }}
+        >
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" style={{ boxShadow: '0 0 10px #10B981' }} />
+          <span className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.9)' }}>
+            Reputation Protocol • Live
+          </span>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative inline-block mb-8"
+        >
+          <div 
+            className="absolute inset-0 rounded-3xl animate-pulse-glow"
+            style={{
+              background: 'radial-gradient(circle, rgba(0, 217, 255, 0.3) 0%, transparent 70%)',
+              filter: 'blur(30px)',
+              transform: 'scale(1.5)',
+            }}
+          />
+          <div 
+            className="relative p-6 rounded-3xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(15, 17, 23, 0.9) 0%, rgba(30, 33, 40, 0.8) 100%)',
+              border: '1px solid rgba(0, 217, 255, 0.3)',
+              boxShadow: '0 0 60px rgba(0, 217, 255, 0.2), inset 0 0 30px rgba(0, 217, 255, 0.05)',
+            }}
+          >
             <img 
               src={logoImage} 
               alt="Reputa Score" 
-              className="w-24 h-24 object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+              className="w-28 h-28 object-contain animate-float"
+              style={{ filter: 'drop-shadow(0 0 20px rgba(0, 217, 255, 0.5))' }}
             />
           </div>
-        </div>
-        
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-5xl md:text-6xl font-black mb-4 tracking-tight"
+          style={{ color: 'rgba(255, 255, 255, 0.95)' }}
+        >
+          SCAN ANY WALLET
+        </motion.h1>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-2xl md:text-3xl font-bold mb-6 animated-gradient-text"
+        >
           Decode Wallet Behavior
-        </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-2">
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="text-lg max-w-xl mx-auto mb-2"
+          style={{ color: 'rgba(160, 164, 184, 0.9)' }}
+        >
           Discover what your Pi Network wallet reveals about trust, consistency, and reputation.
-        </p>
-        <p className="text-sm text-gray-400 max-w-xl mx-auto">
-          Advanced on-chain intelligence • No private keys required
-        </p>
+        </motion.p>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+          className="flex items-center justify-center gap-4 text-sm"
+          style={{ color: 'rgba(120, 125, 150, 0.7)' }}
+        >
+          <span className="flex items-center gap-2">
+            <Cpu className="w-4 h-4 text-cyan-400" />
+            Advanced on-chain intelligence
+          </span>
+          <span className="w-1 h-1 rounded-full bg-gray-600" />
+          <span className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-purple-400" />
+            No private keys required
+          </span>
+        </motion.div>
       </div>
 
-      <Card className="p-8 shadow-2xl border-2 border-purple-100/50 bg-gradient-to-br from-white to-purple-50/30 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.8 }}
+        className="glass-card p-8 max-w-2xl mx-auto"
+        style={{
+          background: isFocused 
+            ? 'linear-gradient(135deg, rgba(30, 33, 40, 0.8) 0%, rgba(37, 41, 50, 0.7) 100%)'
+            : 'rgba(30, 33, 40, 0.6)',
+          border: isFocused 
+            ? '1px solid rgba(139, 92, 246, 0.4)'
+            : '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: isFocused 
+            ? '0 20px 60px rgba(139, 92, 246, 0.2)'
+            : '0 10px 40px rgba(0, 0, 0, 0.3)',
+          transition: 'all 0.3s ease',
+        }}
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="wallet-address" className="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">
+            <label 
+              className="block mb-3 text-sm font-bold uppercase tracking-wider"
+              style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+            >
               Enter Wallet Address
             </label>
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-300"></div>
-              <div className="relative">
-                <Input
-                  id="wallet-address"
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                  className="pr-12 h-14 text-lg font-mono uppercase focus:ring-purple-500 border-gray-200 bg-white/80"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Search className="w-5 h-5 text-gray-400" />
-                </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                className="w-full futuristic-input pr-14 text-base font-mono uppercase"
+                style={{ height: '60px' }}
+              />
+              <div 
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-lg"
+                style={{ background: 'rgba(139, 92, 246, 0.2)' }}
+              >
+                <Search className="w-5 h-5 text-purple-400" />
               </div>
             </div>
             {error && (
-              <p className="mt-2 text-sm text-red-600 font-medium animate-pulse">{error}</p>
+              <motion.p
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 text-sm font-medium flex items-center gap-2"
+                style={{ color: '#EF4444' }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                {error}
+              </motion.p>
             )}
           </div>
 
-          <div className="flex gap-3">
-            <Button 
+          <div className="flex gap-4">
+            <button 
               type="submit" 
-              className="flex-1 h-14 bg-gradient-to-r from-purple-600 via-purple-700 to-cyan-600 hover:from-purple-700 hover:via-purple-800 hover:to-cyan-700 transition-all shadow-lg shadow-purple-500/25 active:scale-[0.98] text-white font-bold text-sm uppercase tracking-wide"
+              className="flex-1 futuristic-button flex items-center justify-center gap-3 text-sm font-bold uppercase tracking-wider"
+              style={{ height: '56px' }}
             >
-              <Zap className="w-4 h-4 mr-2" />
+              <Zap className="w-5 h-5" />
               Analyze Wallet
-            </Button>
-            <Button 
+            </button>
+            <button 
               type="button" 
-              variant="outline" 
               onClick={handleTryDemo}
-              className="h-14 border-2 border-purple-200 hover:bg-purple-50 hover:border-purple-300 font-bold text-gray-600 px-6"
+              className="px-8 rounded-2xl font-bold uppercase tracking-wide text-sm transition-all"
+              style={{
+                height: '56px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'rgba(255, 255, 255, 0.8)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              }}
             >
               Try Demo
-            </Button>
+            </button>
           </div>
         </form>
 
-        <div className="mt-6 p-4 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl border border-cyan-200/50">
-          <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
-              <Info className="w-5 h-5 text-cyan-600" />
-            </div>
-            <div className="text-sm">
-              <p className="font-bold text-cyan-900 mb-1">Privacy First</p>
-              <p className="text-cyan-700">
-                This app only uses public blockchain data. We never ask for private keys or seed phrases.
-              </p>
-            </div>
+        <div 
+          className="mt-6 p-5 rounded-2xl flex gap-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            border: '1px solid rgba(0, 217, 255, 0.15)',
+          }}
+        >
+          <div 
+            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: 'rgba(0, 217, 255, 0.15)' }}
+          >
+            <Shield className="w-6 h-6 text-cyan-400" />
+          </div>
+          <div>
+            <p className="font-bold mb-1" style={{ color: 'rgba(0, 217, 255, 0.9)' }}>Privacy First</p>
+            <p className="text-sm" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>
+              This app only uses public blockchain data. We never ask for private keys or seed phrases.
+            </p>
           </div>
         </div>
-      </Card>
+      </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-6 mt-12">
-        <Card className="p-6 text-center hover:border-purple-300 transition-all hover:shadow-xl hover:-translate-y-1 cursor-default bg-gradient-to-br from-white to-purple-50/50 border-purple-100">
-          <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/25">
-            <Shield className="w-7 h-7 text-white" />
-          </div>
-          <h3 className="font-bold mb-2 text-gray-900">Trust Score</h3>
-          <p className="text-sm text-gray-600">
-            Advanced algorithm evaluating wallet reputation
-          </p>
-        </Card>
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 1 }}
+        className="grid md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto"
+      >
+        {features.map((feature, index) => (
+          <motion.div
+            key={feature.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.1 + index * 0.1 }}
+            className="kpi-card text-center group cursor-default"
+          >
+            <div 
+              className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-gradient-to-br ${feature.color} transition-transform group-hover:scale-110`}
+              style={{ boxShadow: '0 8px 32px rgba(139, 92, 246, 0.25)' }}
+            >
+              <feature.icon className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="font-bold text-lg mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+              {feature.label}
+            </h3>
+            <p className="text-sm" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
+              {feature.description}
+            </p>
+          </motion.div>
+        ))}
+      </motion.div>
 
-        <Card className="p-6 text-center hover:border-cyan-300 transition-all hover:shadow-xl hover:-translate-y-1 cursor-default bg-gradient-to-br from-white to-cyan-50/50 border-cyan-100">
-          <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/25">
-            <BarChart3 className="w-7 h-7 text-white" />
-          </div>
-          <h3 className="font-bold mb-2 text-gray-900">Transaction History</h3>
-          <p className="text-sm text-gray-600">
-            View recent wallet activity and patterns
-          </p>
-        </Card>
-
-        <Card className="p-6 text-center hover:border-amber-300 transition-all hover:shadow-xl hover:-translate-y-1 cursor-default bg-gradient-to-br from-white to-amber-50/50 border-amber-100">
-          <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/25">
-            <Globe className="w-7 h-7 text-white" />
-          </div>
-          <h3 className="font-bold mb-2 text-gray-900">Instant Analysis</h3>
-          <p className="text-sm text-gray-600">
-            Get results in milliseconds from blockchain
-          </p>
-        </Card>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 1.4 }}
+        className="text-center mt-16"
+      >
+        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+          <Sparkles className="w-4 h-4 text-green-400" />
+          <span className="text-sm font-medium" style={{ color: 'rgba(16, 185, 129, 0.9)' }}>
+            Powered by Pi Network Blockchain
+          </span>
+          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+        </div>
+      </motion.div>
     </div>
   );
 }

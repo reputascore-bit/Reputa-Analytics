@@ -27,18 +27,37 @@ function FeedbackSection({ username }: { username: string }) {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-12 p-6 rounded-3xl border border-dashed border-purple-200 bg-purple-50/30">
+    <div 
+      className="max-w-md mx-auto mt-12 p-6 rounded-3xl glass-card"
+      style={{
+        background: 'rgba(30, 33, 40, 0.6)',
+        border: '1px dashed rgba(139, 92, 246, 0.3)',
+      }}
+    >
       <div className="flex items-center gap-2 mb-4">
-        <MessageSquare className="w-4 h-4 text-purple-600" />
-        <h3 className="text-[10px] font-black text-purple-700 uppercase tracking-widest">Pioneer Feedback</h3>
+        <MessageSquare className="w-4 h-4 text-purple-400" />
+        <h3 className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>Pioneer Feedback</h3>
       </div>
       <textarea
         value={feedback}
         onChange={(e) => setFeedback(e.target.value)}
         placeholder="Help us improve Reputa Score..."
-        className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-inner focus:ring-2 focus:ring-purple-400 min-h-[100px] transition-all"
+        className="w-full p-4 text-[11px] rounded-2xl min-h-[100px] transition-all futuristic-input"
+        style={{ 
+          background: 'rgba(15, 17, 23, 0.8)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.9)',
+        }}
       />
-      <button onClick={submitFeedback} className="mt-3 w-full py-3 bg-white border border-purple-100 text-purple-600 text-[9px] font-black uppercase rounded-xl active:scale-95 transition-all shadow-sm hover:bg-purple-600 hover:text-white">
+      <button 
+        onClick={submitFeedback} 
+        className="mt-3 w-full py-3 text-[9px] font-black uppercase rounded-xl active:scale-95 transition-all"
+        style={{
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.3)',
+          color: 'rgba(139, 92, 246, 0.9)',
+        }}
+      >
         {status || 'Send Suggestion'}
       </button>
     </div>
@@ -198,9 +217,27 @@ function ReputaAppContent() {
 
   if (isInitializing && piBrowser) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-purple-600 font-black animate-pulse uppercase tracking-widest text-xs">Initialising Reputa...</p>
+      <div className="min-h-screen futuristic-bg flex flex-col items-center justify-center">
+        <div className="relative">
+          <div 
+            className="absolute inset-0 rounded-full animate-pulse"
+            style={{ 
+              background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+              filter: 'blur(20px)',
+              transform: 'scale(2)',
+            }}
+          />
+          <div 
+            className="relative w-14 h-14 rounded-full animate-spin mb-6"
+            style={{ 
+              border: '3px solid rgba(139, 92, 246, 0.2)',
+              borderTopColor: '#8B5CF6',
+            }}
+          />
+        </div>
+        <p className="font-black animate-pulse uppercase tracking-[0.3em] text-xs" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
+          Initialising Reputa...
+        </p>
       </div>
     );
   }
@@ -208,18 +245,36 @@ function ReputaAppContent() {
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+    <div className="min-h-screen futuristic-bg flex flex-col font-sans relative">
+      <div className="absolute inset-0 grid-pattern pointer-events-none" />
+      
+      <header 
+        className="p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center"
+        style={{
+          background: 'rgba(10, 11, 15, 0.8)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        }}
+      >
         <div className="flex items-center gap-3">
-          <img 
-            src={logoImage} 
-            alt="logo" 
-            className="w-8 h-8 cursor-pointer active:scale-90 transition-transform" 
-            onClick={() => setLogoClickCount(prev => prev + 1)}
-          />
+          <div className="relative">
+            <div 
+              className="absolute inset-0 rounded-xl"
+              style={{ 
+                background: 'radial-gradient(circle, rgba(0, 217, 255, 0.3) 0%, transparent 70%)',
+                filter: 'blur(8px)',
+              }}
+            />
+            <img 
+              src={logoImage} 
+              alt="logo" 
+              className="relative w-10 h-10 cursor-pointer active:scale-90 transition-transform" 
+              style={{ filter: 'drop-shadow(0 0 8px rgba(0, 217, 255, 0.4))' }}
+              onClick={() => setLogoClickCount(prev => prev + 1)}
+            />
+          </div>
           <div className="leading-tight">
-            <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase">
+            <h1 className="font-black text-lg tracking-tight uppercase neon-text-cyan">Reputa Score</h1>
+            <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
                 Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
             </p>
           </div>
@@ -227,51 +282,84 @@ function ReputaAppContent() {
         
         <div className="flex items-center gap-3">
           {logoClickCount >= 5 && (
-            <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100 animate-in zoom-in duration-300">
+            <div 
+              className="flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+              }}
+            >
               <input 
                 type="text"
                 placeholder="Target Wallet (G...)"
                 value={manualWallet}
                 onChange={(e) => setManualWallet(e.target.value)}
-                className="text-[8px] p-2 border rounded-lg w-28 outline-none focus:ring-1 focus:ring-red-400 bg-white font-mono"
+                className="text-[8px] p-2 rounded-lg w-28 outline-none font-mono"
+                style={{
+                  background: 'rgba(15, 17, 23, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                }}
               />
               <button 
                 onClick={handleRewardPayout}
                 disabled={isPayoutLoading}
-                className={`px-3 py-2 ${isPayoutLoading ? 'bg-gray-400' : 'bg-red-600'} text-white text-[8px] font-black rounded-lg uppercase shadow-sm active:scale-95 transition-all`}
+                className="px-3 py-2 text-white text-[8px] font-black rounded-lg uppercase active:scale-95 transition-all"
+                style={{
+                  background: isPayoutLoading ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.8)',
+                }}
               >
                 {isPayoutLoading ? '...' : 'PAY USER'}
               </button>
             </div>
           )}
-          <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
-            <Send className="w-4 h-4" />
+          <a 
+            href="https://t.me/+zxYP2x_4IWljOGM0" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="p-2.5 rounded-xl transition-all"
+            style={{
+              background: 'rgba(34, 158, 217, 0.15)',
+              border: '1px solid rgba(34, 158, 217, 0.3)',
+            }}
+          >
+            <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
           </a>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 flex-1">
+      <main className="container mx-auto px-4 py-12 flex-1 relative z-10">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
-            <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Protocol...</p>
+            <div className="relative">
+              <div 
+                className="absolute inset-0 rounded-full animate-pulse"
+                style={{ 
+                  background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)',
+                  filter: 'blur(20px)',
+                  transform: 'scale(2)',
+                }}
+              />
+              <div 
+                className="relative w-16 h-16 rounded-full animate-spin"
+                style={{ 
+                  border: '3px solid rgba(139, 92, 246, 0.2)',
+                  borderTopColor: '#8B5CF6',
+                }}
+              />
+            </div>
+            <p className="text-[10px] mt-8 font-black tracking-[0.3em] uppercase" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
+              Syncing Protocol...
+            </p>
           </div>
         ) : !walletData ? (
-          <div className="max-w-md mx-auto py-6">
-            <div className="mb-8 text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full mb-3">
-                    <ShieldCheck className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Reputation Protocol</span>
-                </div>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/></h2>
-            </div>
-
+          <div className="max-w-4xl mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-             <div className="relative overflow-hidden rounded-[40px]">
+             <div className="relative overflow-hidden rounded-[32px]">
                 <WalletAnalysis 
                   walletData={walletData} 
                   isProUser={isUnlocked} 
@@ -281,16 +369,30 @@ function ReputaAppContent() {
 
                 {!isUnlocked && (
                   <div className="absolute inset-x-0 bottom-0 h-[41%] z-20 flex flex-col items-center justify-end">
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
+                    <div 
+                      className="absolute inset-0 backdrop-blur-md"
+                      style={{ background: 'linear-gradient(to top, rgba(10, 11, 15, 0.98) 0%, rgba(10, 11, 15, 0.9) 50%, transparent 100%)' }}
+                    />
                     <div className="relative pb-10 px-6 text-center w-full">
-                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-purple-100 mb-3 animate-bounce">
-                        <Lock className="w-5 h-5 text-purple-600" />
+                      <div 
+                        className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 animate-bounce"
+                        style={{
+                          background: 'rgba(139, 92, 246, 0.2)',
+                          border: '1px solid rgba(139, 92, 246, 0.4)',
+                          boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)',
+                        }}
+                      >
+                        <Lock className="w-6 h-6" style={{ color: '#8B5CF6' }} />
                       </div>
-                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
-                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Pi Transaction</p>
+                      <h3 className="text-sm font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                        Detailed Audit Locked
+                      </h3>
+                      <p className="text-xs font-bold uppercase mb-5" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
+                        Requires 1 Pi Transaction
+                      </p>
                       <button 
                         onClick={() => setIsUpgradeModalOpen(true)}
-                        className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
+                        className="futuristic-button px-8 py-4 text-sm font-black uppercase tracking-wide"
                       >
                         Unlock Full Report
                       </button>
@@ -303,17 +405,28 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-6 text-center border-t border-gray-50 flex flex-col items-center gap-4">
+      <footer 
+        className="p-8 text-center flex flex-col items-center gap-5 relative z-10"
+        style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}
+      >
         <a 
           href="https://t.me/+zxYP2x_4IWljOGM0" 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full transition-transform active:scale-95"
+          className="flex items-center gap-3 px-6 py-3 rounded-full transition-all active:scale-95"
+          style={{
+            background: 'rgba(34, 158, 217, 0.1)',
+            border: '1px solid rgba(34, 158, 217, 0.3)',
+          }}
         >
-          <Send className="w-3 h-3" />
-          <span className="text-[9px] font-black uppercase tracking-widest">Join Telegram Community</span>
+          <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(34, 158, 217, 0.9)' }}>
+            Join Telegram Community
+          </span>
         </a>
-        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v2 Stable</div>
+        <div className="text-[10px] font-bold tracking-[0.4em] uppercase" style={{ color: 'rgba(100, 105, 130, 0.5)' }}>
+          Reputa Score v2 Stable
+        </div>
       </footer>
 
       <AccessUpgradeModal 

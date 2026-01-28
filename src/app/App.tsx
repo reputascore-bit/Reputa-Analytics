@@ -63,7 +63,6 @@ function ReputaAppContent() {
   const { refreshWallet } = useTrust();
 
   // الوظيفة المسؤولة عن تحويل المال من التطبيق للمحفظة (App-to-User)
-  // تم تعديلها لإرسال الـ UID الحقيقي وحل مشكلة user_not_found
   const handleRewardPayout = async () => {
     const targetAddress = manualWallet.trim();
     
@@ -77,6 +76,16 @@ function ReputaAppContent() {
       return;
     }
 
+    // --- التعديل المطلوب: تنظيف العمليات المعلقة قبل البدء ---
+    try {
+      // محاولة إلغاء أي دفع معلق في الـ SDK لمنع تعارض الحالات
+      if ((window as any).Pi) {
+        await (window as any).Pi.cancelPayment("current_id").catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Cleanup ignored");
+    }
+
     setIsPayoutLoading(true);
     try {
       const response = await fetch('/api/pi-payment', {
@@ -86,7 +95,7 @@ function ReputaAppContent() {
           action: 'payout',
           address: targetAddress,
           amount: 0.01,
-          uid: currentUser.uid, // هذا هو المفتاح لحل خطأ user_not_found
+          uid: currentUser.uid, 
           memo: "Reward for High Reputa Score"
         }),
       });
@@ -97,6 +106,7 @@ function ReputaAppContent() {
         alert("✅ Payout Successful! Check your wallet.");
         setManualWallet('');
       } else {
+        // التعامل مع رسالة Ongoing Payment القادمة من السيرفر
         const errorDetail = result.error?.error_message || result.error || "Check App Wallet balance";
         alert(`❌ Payout Failed: ${errorDetail}`);
       }
@@ -151,7 +161,7 @@ function ReputaAppContent() {
           reputaScore: 632,
           trustLevel: "Elite",
           recentActivity: [
-             { id: "tx_8212", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
+              { id: "tx_8212", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
           ]
         });
         setIsLoading(false);

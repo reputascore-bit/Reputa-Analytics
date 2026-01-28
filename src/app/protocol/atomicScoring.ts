@@ -93,15 +93,67 @@ export interface AtomicReputationResult {
   lastUpdated: Date;
 }
 
-const TRUST_LEVEL_THRESHOLDS: { min: number; max: number; level: AtomicTrustLevel }[] = [
-  { min: -Infinity, max: 0, level: 'Very Low Trust' },
-  { min: 0, max: 25, level: 'Low Trust' },
-  { min: 25, max: 50, level: 'Medium' },
-  { min: 50, max: 80, level: 'Active' },
-  { min: 80, max: 120, level: 'Trusted' },
-  { min: 120, max: 180, level: 'Pioneer+' },
-  { min: 180, max: Infinity, level: 'Elite' },
+const BACKEND_SCORE_CAP = 10000;
+
+const TRUST_LEVEL_THRESHOLDS: { min: number; max: number; level: AtomicTrustLevel; index: number }[] = [
+  { min: -Infinity, max: 0, level: 'Very Low Trust', index: 0 },
+  { min: 0, max: BACKEND_SCORE_CAP * 0.10, level: 'Low Trust', index: 1 },
+  { min: BACKEND_SCORE_CAP * 0.10, max: BACKEND_SCORE_CAP * 0.25, level: 'Medium', index: 2 },
+  { min: BACKEND_SCORE_CAP * 0.25, max: BACKEND_SCORE_CAP * 0.45, level: 'Active', index: 3 },
+  { min: BACKEND_SCORE_CAP * 0.45, max: BACKEND_SCORE_CAP * 0.65, level: 'Trusted', index: 4 },
+  { min: BACKEND_SCORE_CAP * 0.65, max: BACKEND_SCORE_CAP * 0.85, level: 'Pioneer+', index: 5 },
+  { min: BACKEND_SCORE_CAP * 0.85, max: Infinity, level: 'Elite', index: 6 },
 ];
+
+export function getBackendScoreCap(): number {
+  return BACKEND_SCORE_CAP;
+}
+
+export function getLevelProgress(rawScore: number): { 
+  currentLevel: AtomicTrustLevel; 
+  levelIndex: number;
+  progressInLevel: number;
+  pointsToNextLevel: number;
+  nextLevel: AtomicTrustLevel | null;
+  displayScore: number;
+  backendScore: number;
+} {
+  const backendScore = Math.min(rawScore, BACKEND_SCORE_CAP);
+  const displayScore = rawScore;
+  
+  let currentThreshold = TRUST_LEVEL_THRESHOLDS[1];
+  for (const threshold of TRUST_LEVEL_THRESHOLDS) {
+    if (backendScore >= threshold.min && backendScore < threshold.max) {
+      currentThreshold = threshold;
+      break;
+    }
+  }
+  
+  const nextThresholdIndex = currentThreshold.index + 1;
+  const nextThreshold = nextThresholdIndex < TRUST_LEVEL_THRESHOLDS.length 
+    ? TRUST_LEVEL_THRESHOLDS[nextThresholdIndex] 
+    : null;
+  
+  const levelRange = currentThreshold.max === Infinity 
+    ? BACKEND_SCORE_CAP - currentThreshold.min 
+    : currentThreshold.max - currentThreshold.min;
+  const pointsInLevel = backendScore - currentThreshold.min;
+  const progressInLevel = Math.min(100, (pointsInLevel / levelRange) * 100);
+  
+  const pointsToNextLevel = nextThreshold 
+    ? Math.max(0, nextThreshold.min - backendScore)
+    : 0;
+  
+  return {
+    currentLevel: currentThreshold.level,
+    levelIndex: currentThreshold.index,
+    progressInLevel,
+    pointsToNextLevel,
+    nextLevel: nextThreshold?.level || null,
+    displayScore,
+    backendScore,
+  };
+}
 
 function applyTimeDecay(items: AtomicScoreItem[], now: Date): number {
   return items.reduce((sum, item) => {

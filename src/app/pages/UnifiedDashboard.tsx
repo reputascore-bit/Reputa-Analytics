@@ -17,6 +17,7 @@ import { ReputationPage } from './ReputationPage';
 import { DailyCheckIn } from '../components/DailyCheckIn';
 import { PointsExplainer } from '../components/PointsExplainer';
 import { MiningDaysWidget } from '../components/MiningDaysWidget';
+import { ProfileSection } from '../components/ProfileSection';
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 

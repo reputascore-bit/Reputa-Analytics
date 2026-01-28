@@ -6,7 +6,8 @@ const redis = new Redis({
 });
 
 const PI_API_KEY = process.env.PI_API_KEY;
-const PI_API_BASE = 'https://api.minepi.com/v2';
+// بناءً على تجربتك الناجحة، سنبقي الرابط على Mainnet
+const PI_API_BASE = 'https://api.minepi.com/v2'; 
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,23 +20,55 @@ export default async function handler(req: any, res: any) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     
-    // --- تعديل ذكي: تنظيف البيانات لضمان عدم وجود مسافات خفية تسبب خطأ 404 ---
+    // تنظيف البيانات
     const paymentId = body.paymentId?.toString().trim();
     const action = body.action?.toString().trim();
     const txid = body.txid?.toString().trim();
     const uid = body.uid;
+    
+    // استلام بيانات التحويل (App-to-User)
+    const address = body.address?.toString().trim();
+    const amount = body.amount;
+
+    // --- الجزء المضاف: معالجة التحويل للمستخدم (App-to-User) ---
+    if (action === 'payout') {
+      console.log(`[PI-API] Processing App-to-User Payout to: ${address}`);
+      
+      const payoutResponse = await fetch(`${PI_API_BASE}/payments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Key ${PI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payment: {
+            amount: amount || 0.01,
+            memo: body.memo || "Reward",
+            metadata: { type: "payout" },
+            uid: "payout_" + Date.now(),
+            recipient_address: address 
+          }
+        }),
+      });
+
+      const payoutData = await payoutResponse.json();
+      
+      if (!payoutResponse.ok) {
+        console.error("[PI-API] Payout Failed:", payoutData);
+        return res.status(payoutResponse.status).json({ error: payoutData });
+      }
+
+      return res.status(200).json({ success: true, data: payoutData });
+    }
+    // --- نهاية الجزء المضاف ---
 
     if (!paymentId || !action) {
-      console.error("[PI-API] Validation Error: Missing paymentId or action");
       return res.status(400).json({ error: "Missing paymentId or action" });
     }
 
-    // بناء الرابط بدقة
     const url = `${PI_API_BASE}/payments/${paymentId}/${action}`;
     
-    // تسجيل ذكي للمعلومات لاكتشاف الخلل في Vercel Logs
     console.log(`[PI-API] Attempting ${action} for Payment ID: [${paymentId}]`);
-    console.log(`[PI-API] Full Target URL: ${url}`);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -49,7 +82,6 @@ export default async function handler(req: any, res: any) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      // إذا استمر خطأ 404، فالسيرفر سيطبع لنا التفاصيل بدقة هنا
       console.error(`[PI-API] ${action} Failed with Status ${response.status}:`, data);
       return res.status(response.status).json({ error: data });
     }

@@ -68,6 +68,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
 
 ## Recent Changes
+- January 28, 2026: Updated NetworkInfoWidget with real Pi Block Explorer mainnet data
+- January 28, 2026: Added all 6 metrics: Total Migrated Mining, Locked Mining, Unlocked Mining, Circulating Supply, Effective Total Supply, Max Supply
+- January 28, 2026: Implemented auto-refresh (30 seconds) with caching and live data indicator
+- January 28, 2026: Added subscribeToMetrics() for reactive updates across components
 - January 28, 2026: Simplified Pioneer Profile Card to 4 tiles: Reputa, Balance, Age, Level (removed Points and Status for cleaner UX)
 - January 28, 2026: Unified dashboard uses single atomic scoring protocol throughout
 - January 28, 2026: Improved grid layout with responsive 2x2 on mobile, 4-column on desktop

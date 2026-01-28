@@ -56,6 +56,9 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: MERGED Wallet Analysis and Analytics Dashboard into single UnifiedDashboard
+- January 28, 2026: Added section tabs for navigation: Overview, Analytics, Transactions, Audit, Portfolio
+- January 28, 2026: Updated sidebar with new navigation items matching unified page sections
 - January 28, 2026: Improved homepage layout with better logo proportions and professional fonts
 - January 28, 2026: Updated Analytics Dashboard with futuristic theme (purple/cyan accents, glassmorphism)
 - January 28, 2026: Added pioneer profile section with username, wallet address, and score display

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, BarChart3 } from 'lucide-react'; 
+import { Send, MessageSquare } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
-import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
-import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
+import { UnifiedDashboard } from './pages/UnifiedDashboard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
@@ -73,8 +72,7 @@ function ReputaAppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
-  const [showAnalyticsDashboard, setShowAnalyticsDashboard] = useState(false);
-  
+    
   // --- منطق المطور لعمليات App-to-User ---
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [manualWallet, setManualWallet] = useState('');
@@ -246,15 +244,29 @@ function ReputaAppContent() {
 
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
-  if (showAnalyticsDashboard) {
+  if (walletData) {
     return (
-      <AnalyticsDashboard 
-        onBack={() => setShowAnalyticsDashboard(false)}
-        walletBalance={walletData?.balance || 0}
-        username={currentUser?.username}
-        walletAddress={walletData?.address}
-        reputaScore={walletData?.reputaScore || 0}
-      />
+      <>
+        <UnifiedDashboard 
+          walletData={walletData}
+          isProUser={isUnlocked}
+          onReset={() => setWalletData(null)}
+          onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
+          username={currentUser?.username}
+        />
+        <AccessUpgradeModal 
+          isOpen={isUpgradeModalOpen} 
+          onClose={() => setIsUpgradeModalOpen(false)} 
+          currentUser={currentUser}
+          onUpgrade={() => { 
+            setIsVip(true); 
+            setPaymentCount(1); 
+            setIsUpgradeModalOpen(false); 
+            syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
+          }} 
+        />
+        <Analytics />
+      </>
     );
   }
 
@@ -295,21 +307,6 @@ function ReputaAppContent() {
         </div>
         
         <div className="flex items-center gap-3">
-          {walletData && (
-            <button
-              onClick={() => setShowAnalyticsDashboard(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all active:scale-95"
-              style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.4)',
-              }}
-            >
-              <BarChart3 className="w-4 h-4" style={{ color: '#8B5CF6' }} />
-              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
-                Analytics
-              </span>
-            </button>
-          )}
           {logoClickCount >= 5 && (
             <div 
               className="flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
@@ -381,55 +378,10 @@ function ReputaAppContent() {
               Syncing Protocol...
             </p>
           </div>
-        ) : !walletData ? (
+        ) : (
           <div className="max-w-4xl mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
             <FeedbackSection username={currentUser?.username || 'Guest'} />
-          </div>
-        ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-             <div className="relative overflow-hidden rounded-[32px]">
-                <WalletAnalysis 
-                  walletData={walletData} 
-                  isProUser={isUnlocked} 
-                  onReset={() => setWalletData(null)} 
-                  onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
-                />
-
-                {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[41%] z-20 flex flex-col items-center justify-end">
-                    <div 
-                      className="absolute inset-0 backdrop-blur-md"
-                      style={{ background: 'linear-gradient(to top, rgba(10, 11, 15, 0.98) 0%, rgba(10, 11, 15, 0.9) 50%, transparent 100%)' }}
-                    />
-                    <div className="relative pb-10 px-6 text-center w-full">
-                      <div 
-                        className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 animate-bounce"
-                        style={{
-                          background: 'rgba(139, 92, 246, 0.2)',
-                          border: '1px solid rgba(139, 92, 246, 0.4)',
-                          boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)',
-                        }}
-                      >
-                        <Lock className="w-6 h-6" style={{ color: '#8B5CF6' }} />
-                      </div>
-                      <h3 className="text-sm font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
-                        Detailed Audit Locked
-                      </h3>
-                      <p className="text-xs font-bold uppercase mb-5" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
-                        Requires 1 Pi Transaction
-                      </p>
-                      <button 
-                        onClick={() => setIsUpgradeModalOpen(true)}
-                        className="futuristic-button px-8 py-4 text-sm font-black uppercase tracking-wide"
-                      >
-                        Unlock Full Report
-                      </button>
-                    </div>
-                  </div>
-                )}
-             </div>
-             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
       </main>

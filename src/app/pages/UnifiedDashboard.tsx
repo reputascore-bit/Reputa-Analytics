@@ -1,0 +1,509 @@
+import { useState, useEffect } from 'react';
+import { useLanguage } from '../hooks/useLanguage';
+import { DashboardSidebar } from '../components/DashboardSidebar';
+import { TransactionTimeline } from '../components/charts/TransactionTimeline';
+import { PointsBreakdown } from '../components/charts/PointsBreakdown';
+import { RiskActivity } from '../components/charts/RiskActivity';
+import { TokenPortfolio } from '../components/charts/TokenPortfolio';
+import { ScoreBreakdownChart } from '../components/ScoreBreakdownChart';
+import { PiDexSection } from '../components/PiDexSection';
+import { TrustGauge } from '../components/TrustGauge';
+import { TransactionList } from '../components/TransactionList';
+import { AuditReport } from '../components/AuditReport';
+import { 
+  processTransactionTimeline, 
+  processScoreBreakdown, 
+  processRiskActivity, 
+  processTokenPortfolio,
+  generateMockChartData 
+} from '../services/chartDataProcessor';
+import { AppMode, ChartDataPoint, ChartReputationScore, TokenBalance, Language, WalletData } from '../protocol/types';
+import { 
+  ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
+  Activity, Clock, Zap, Sparkles, BarChart3, FileText,
+  PieChart, LineChart, AlertTriangle, Coins, RefreshCw, Lock
+} from 'lucide-react';
+import { Button } from '../components/ui/button';
+
+interface UnifiedDashboardProps {
+  walletData: WalletData;
+  isProUser: boolean;
+  onReset: () => void;
+  onUpgradePrompt: () => void;
+  username?: string;
+}
+
+type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet';
+
+export function UnifiedDashboard({ 
+  walletData,
+  isProUser,
+  onReset,
+  onUpgradePrompt,
+  username
+}: UnifiedDashboardProps) {
+  const { t, language, changeLanguage } = useLanguage();
+  const [mode, setMode] = useState<AppMode>({ mode: 'demo', connected: false });
+  const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+  
+  const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
+  const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);
+  const [riskData, setRiskData] = useState<ChartDataPoint[]>([]);
+  const [portfolioData, setPortfolioData] = useState<ChartDataPoint[]>([]);
+  const [score, setScore] = useState<ChartReputationScore | null>(null);
+  const [tokens, setTokens] = useState<TokenBalance[]>([]);
+
+  useEffect(() => {
+    const { transactions, score: mockScore, tokens: mockTokens } = generateMockChartData();
+    
+    setTimelineData(processTransactionTimeline(transactions, period));
+    setBreakdownData(processScoreBreakdown(mockScore));
+    setRiskData(processRiskActivity(transactions, mockScore));
+    setPortfolioData(processTokenPortfolio(mockTokens));
+    setScore(mockScore);
+    setTokens(mockTokens);
+  }, [period]);
+
+  const handleModeToggle = () => {
+    setMode(prev => ({
+      mode: prev.mode === 'demo' ? 'testnet' : 'demo',
+      connected: prev.mode === 'demo' ? true : false,
+    }));
+  };
+
+  const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
+    setPeriod(newPeriod);
+  };
+
+  const handleSidebarNavigation = (itemId: string) => {
+    const sectionMap: Record<string, ActiveSection> = {
+      'dashboard': 'overview',
+      'analytics': 'analytics',
+      'transactions': 'transactions',
+      'audit': 'audit',
+      'portfolio': 'portfolio',
+      'wallet': 'wallet',
+    };
+    setActiveSection(sectionMap[itemId] || 'overview');
+  };
+
+  const languages: { code: Language; label: string }[] = [
+    { code: 'en', label: 'EN' },
+    { code: 'ar', label: 'AR' },
+    { code: 'fr', label: 'FR' },
+    { code: 'zh', label: 'ZH' },
+  ];
+
+  const formatAddress = (address: string) => {
+    if (address.length > 16) {
+      return `${address.slice(0, 8)}...${address.slice(-8)}`;
+    }
+    return address;
+  };
+
+  const getBadgeInfo = () => {
+    const scoreVal = walletData.reputaScore || 0;
+    if (scoreVal >= 600) return { label: 'Elite Wallet', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', borderColor: 'border-emerald-500/50', icon: '🛡️', glow: 'shadow-emerald-500/30' };
+    if (scoreVal >= 400) return { label: 'Trusted Wallet', color: 'text-cyan-400', bgColor: 'bg-cyan-500/20', borderColor: 'border-cyan-500/50', icon: '✅', glow: 'shadow-cyan-500/30' };
+    if (scoreVal >= 200) return { label: 'Moderate Trust', color: 'text-amber-400', bgColor: 'bg-amber-500/20', borderColor: 'border-amber-500/50', icon: '⚖️', glow: 'shadow-amber-500/30' };
+    return { label: 'Limited Trust', color: 'text-red-400', bgColor: 'bg-red-500/20', borderColor: 'border-red-500/50', icon: '⚠️', glow: 'shadow-red-500/30' };
+  };
+
+  const badgeInfo = getBadgeInfo();
+
+  const sectionButtons: { id: ActiveSection; icon: React.ElementType; label: string }[] = [
+    { id: 'overview', icon: BarChart3, label: t('sidebar.dashboard') },
+    { id: 'analytics', icon: LineChart, label: t('sidebar.analytics') },
+    { id: 'transactions', icon: Activity, label: t('sidebar.transactions') },
+    { id: 'audit', icon: FileText, label: t('sidebar.audit') },
+    { id: 'portfolio', icon: PieChart, label: t('sidebar.portfolio') },
+    { id: 'wallet', icon: Wallet, label: t('sidebar.wallet') },
+  ];
+
+  return (
+    <div className="min-h-screen futuristic-bg flex">
+      <div className="absolute inset-0 grid-pattern pointer-events-none" />
+      
+      <DashboardSidebar 
+        mode={mode} 
+        onModeToggle={handleModeToggle}
+        activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
+        onItemClick={handleSidebarNavigation}
+      />
+
+      <main className="flex-1 p-6 overflow-auto relative z-10">
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onReset}
+              className="p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-purple-500/40 group"
+              style={{ border: '1px solid rgba(139, 92, 246, 0.3)' }}
+            >
+              <ArrowLeft className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+            </button>
+            <div>
+              <h1 className="text-xl font-black uppercase tracking-wide neon-text-purple">{t('dashboard.title')}</h1>
+              {username && (
+                <p className="text-sm" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>{t('dashboard.welcome')}, {username}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={onUpgradePrompt} 
+              className="gap-2 bg-gradient-to-r from-purple-600 via-purple-700 to-cyan-600 text-white font-bold text-xs uppercase shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all border border-purple-400/30"
+            >
+              <Sparkles className="w-4 h-4" />
+              {isProUser ? 'Pro Active' : 'Upgrade'}
+            </Button>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-cyan-500/40"
+              style={{ border: '1px solid rgba(0, 217, 255, 0.3)' }}
+              title="Refresh Data"
+            >
+              <RefreshCw className="w-4 h-4 text-cyan-400" />
+            </button>
+
+            <div className="flex items-center gap-2 glass-card px-3 py-2">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              {languages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => changeLanguage(lang.code)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all ${
+                    language === lang.code
+                      ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Pioneer Profile Card */}
+        <div className="glass-card p-5 mb-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(0, 217, 255, 0.3) 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.4)',
+                  boxShadow: '0 0 25px rgba(139, 92, 246, 0.2)',
+                }}
+              >
+                <User className="w-7 h-7 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                  {username || 'Pioneer'}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <Wallet className="w-3 h-3 text-cyan-400" />
+                  <span className="font-mono text-sm" style={{ color: 'rgba(0, 217, 255, 0.9)' }}>
+                    {formatAddress(walletData.address)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                <div className="flex items-center gap-1.5 justify-center mb-0.5">
+                  <TrendingUp className="w-3 h-3 text-purple-400" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400">Score</span>
+                </div>
+                <p className="text-xl font-black neon-text-purple">{walletData.reputaScore}<span className="text-gray-500 text-xs">/1000</span></p>
+              </div>
+
+              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
+                <div className="flex items-center gap-1.5 justify-center mb-0.5">
+                  <Coins className="w-3 h-3 text-cyan-400" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-cyan-400">{t('dashboard.balance')}</span>
+                </div>
+                <p className="text-xl font-black neon-text-cyan">
+                  {walletData.balance.toFixed(2)} <span className="text-cyan-400">π</span>
+                </p>
+              </div>
+
+              <div className="text-center px-4 py-2.5 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                <div className="flex items-center gap-1.5 justify-center mb-0.5">
+                  <Clock className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400">Age</span>
+                </div>
+                <p className="text-xl font-black text-emerald-400">{walletData.accountAge} <span className="text-gray-500 text-xs">days</span></p>
+              </div>
+
+              <div className={`text-center px-4 py-2.5 rounded-xl ${badgeInfo.bgColor} ${badgeInfo.borderColor} border`}>
+                <span className="text-[9px] font-bold uppercase tracking-wider block mb-0.5" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Status</span>
+                <p className={`text-sm font-black uppercase ${badgeInfo.color}`}>{badgeInfo.icon} {badgeInfo.label}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section Navigation Tabs */}
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+          {sectionButtons.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => setActiveSection(section.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+                activeSection === section.id
+                  ? 'bg-gradient-to-r from-purple-500/30 to-cyan-500/30 text-white border border-purple-500/50'
+                  : 'glass-card text-gray-400 hover:text-white hover:border-purple-500/30'
+              }`}
+              style={activeSection !== section.id ? { border: '1px solid rgba(255, 255, 255, 0.1)' } : {}}
+            >
+              <section.icon className={`w-4 h-4 ${activeSection === section.id ? 'text-purple-400' : ''}`} />
+              {section.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Sections */}
+        {activeSection === 'overview' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Trust Gauge */}
+            <TrustGauge 
+              score={walletData.reputaScore ?? 500} 
+              trustLevel={walletData.trustLevel ?? 'Medium'}
+              consistencyScore={walletData.consistencyScore ?? 85}
+              networkTrust={walletData.networkTrust ?? 90}
+            />
+
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="glass-card p-4 hover:border-purple-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }} onClick={() => setActiveSection('transactions')}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Total Tx</p>
+                    <p className="font-bold text-white">{walletData.totalTransactions || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-card p-4 hover:border-cyan-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }} onClick={() => setActiveSection('analytics')}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
+                    <LineChart className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Analytics</p>
+                    <p className="font-bold text-white">View Charts</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-card p-4 hover:border-emerald-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }} onClick={() => setActiveSection('portfolio')}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                    <PieChart className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Portfolio</p>
+                    <p className="font-bold text-white">{tokens.length} Tokens</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass-card p-4 hover:border-amber-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(245, 158, 11, 0.2)' }} onClick={() => setActiveSection('audit')}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">Audit</p>
+                    <p className="font-bold text-white">Full Report</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Transactions Preview */}
+            <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+                  Recent Transactions
+                </h3>
+                <button 
+                  onClick={() => setActiveSection('transactions')}
+                  className="text-[10px] font-bold uppercase text-cyan-400 hover:text-cyan-300 transition-all"
+                >
+                  View All →
+                </button>
+              </div>
+              <TransactionList 
+                transactions={walletData.transactions.slice(0, 4)} 
+                walletAddress={walletData.address} 
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'analytics' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <TransactionTimeline 
+                  internal={timelineData.internal}
+                  external={timelineData.external}
+                  onFilterChange={handlePeriodChange}
+                />
+              </div>
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                <PointsBreakdown data={breakdownData} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(236, 72, 153, 0.2)' }}>
+                <RiskActivity data={riskData} />
+              </div>
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                {score && <ScoreBreakdownChart score={score} />}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'transactions' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <TransactionList 
+                transactions={walletData.transactions} 
+                walletAddress={walletData.address} 
+              />
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'audit' && (
+          <div className="space-y-6 animate-in fade-in duration-300 relative">
+            <AuditReport 
+              walletData={{
+                ...walletData,
+                transactions: walletData.transactions
+              }} 
+              isProUser={isProUser} 
+              onUpgradePrompt={onUpgradePrompt}
+            />
+            
+            {!isProUser && (
+              <div className="absolute inset-x-0 bottom-0 h-[50%] z-20 flex flex-col items-center justify-end pointer-events-auto">
+                <div 
+                  className="absolute inset-0 backdrop-blur-md"
+                  style={{ background: 'linear-gradient(to top, rgba(10, 11, 15, 0.98) 0%, rgba(10, 11, 15, 0.9) 50%, transparent 100%)' }}
+                />
+                <div className="relative pb-10 px-6 text-center w-full">
+                  <div 
+                    className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 animate-bounce"
+                    style={{
+                      background: 'rgba(139, 92, 246, 0.2)',
+                      border: '1px solid rgba(139, 92, 246, 0.4)',
+                      boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)',
+                    }}
+                  >
+                    <Lock className="w-6 h-6" style={{ color: '#8B5CF6' }} />
+                  </div>
+                  <h3 className="text-sm font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                    Detailed Audit Locked
+                  </h3>
+                  <p className="text-xs font-bold uppercase mb-5" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
+                    Requires 1 Pi Transaction
+                  </p>
+                  <button 
+                    onClick={onUpgradePrompt}
+                    className="futuristic-button px-8 py-4 text-sm font-black uppercase tracking-wide"
+                  >
+                    Unlock Full Report
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeSection === 'portfolio' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <TokenPortfolio data={portfolioData} />
+              </div>
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                <PiDexSection tokens={tokens} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'wallet' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <Wallet className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
+                  Wallet Information
+                </h2>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Wallet Address</p>
+                    <p className="font-mono text-sm text-white break-all">{walletData.address}</p>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Available Balance</p>
+                    <p className="text-2xl font-black neon-text-purple">{walletData.balance.toFixed(4)} <span className="text-purple-400">π</span></p>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Account Age</p>
+                    <p className="text-xl font-black text-emerald-400">{walletData.accountAge} days</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Reputa Score</p>
+                    <p className="text-2xl font-black neon-text-purple">{walletData.reputaScore} <span className="text-gray-500 text-sm">/ 1000</span></p>
+                  </div>
+                  
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Total Transactions</p>
+                    <p className="text-xl font-black text-cyan-400">{walletData.totalTransactions || walletData.transactions.length}</p>
+                  </div>
+                  
+                  <div className={`p-4 rounded-xl ${badgeInfo.bgColor}`} style={{ border: `1px solid` }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Trust Status</p>
+                    <p className={`text-lg font-black uppercase ${badgeInfo.color}`}>{badgeInfo.icon} {badgeInfo.label}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <TrustGauge 
+              score={walletData.reputaScore ?? 500} 
+              trustLevel={walletData.trustLevel ?? 'Medium'}
+              consistencyScore={walletData.consistencyScore ?? 85}
+              networkTrust={walletData.networkTrust ?? 90}
+            />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

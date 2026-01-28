@@ -2,8 +2,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import { AppMode } from '../protocol/types';
 import { 
   LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
+  LineChart, 
+  Activity, 
   BarChart3, 
   CreditCard, 
   FileText,
@@ -11,7 +11,10 @@ import {
   MessageSquare,
   HelpCircle,
   TestTube,
-  Zap
+  Zap,
+  PieChart,
+  Shield,
+  Wallet
 } from 'lucide-react';
 import logoImage from '../../assets/logo.png';
 
@@ -27,14 +30,14 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
 
   const mainItems = [
     { icon: LayoutDashboard, labelKey: 'sidebar.dashboard', id: 'dashboard' },
-    { icon: Package, labelKey: 'sidebar.products', id: 'products' },
-    { icon: ShoppingCart, labelKey: 'sidebar.orders', id: 'orders' },
-    { icon: BarChart3, labelKey: 'sidebar.reports', id: 'reports' },
+    { icon: LineChart, labelKey: 'sidebar.analytics', id: 'analytics' },
+    { icon: Activity, labelKey: 'sidebar.transactions', id: 'transactions' },
+    { icon: FileText, labelKey: 'sidebar.audit', id: 'audit' },
   ];
 
   const transactionItems = [
-    { icon: CreditCard, labelKey: 'sidebar.transactions', id: 'transactions' },
-    { icon: FileText, labelKey: 'sidebar.invoice', id: 'invoice' },
+    { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
+    { icon: Wallet, labelKey: 'sidebar.wallet', id: 'wallet' },
   ];
 
   const toolsItems = [

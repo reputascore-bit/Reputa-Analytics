@@ -62,22 +62,24 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
       }}
     >
       <div className="mb-8 flex items-center gap-3">
-        <div className="relative">
-          <div 
-            className="absolute inset-0 rounded-xl"
-            style={{ 
-              background: 'radial-gradient(circle, rgba(0, 217, 255, 0.3) 0%, transparent 70%)',
-              filter: 'blur(8px)',
-            }}
-          />
+        <div 
+          className="relative w-10 h-10 flex items-center justify-center rounded-xl"
+          style={{
+            background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.95) 0%, rgba(20, 22, 30, 0.9) 100%)',
+            boxShadow: '0 0 20px rgba(0, 217, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
+          }}
+        >
           <img 
             src={logoImage} 
             alt="logo" 
-            className="relative w-9 h-9 object-contain"
-            style={{ filter: 'drop-shadow(0 0 8px rgba(0, 217, 255, 0.4))' }}
+            className="w-7 h-7 object-contain"
+            style={{ filter: 'drop-shadow(0 0 6px rgba(0, 217, 255, 0.5))', mixBlendMode: 'screen' }}
           />
         </div>
-        <h2 className="font-black text-xl uppercase tracking-tight neon-text-cyan">
+        <h2 
+          className="font-bold text-lg tracking-tight"
+          style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-display)', textShadow: '0 0 20px rgba(0, 217, 255, 0.4)' }}
+        >
           Reputa Score
         </h2>
       </div>

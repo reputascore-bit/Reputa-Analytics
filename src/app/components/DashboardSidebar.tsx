@@ -15,7 +15,8 @@ import {
   PieChart,
   Shield,
   Wallet,
-  User
+  User,
+  Globe
 } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
 
@@ -39,6 +40,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
   const transactionItems = [
     { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
     { icon: Wallet, labelKey: 'sidebar.wallet', id: 'wallet' },
+    { icon: Globe, labelKey: 'Network', id: 'network' },
     { icon: User, labelKey: 'sidebar.profile', id: 'profile' },
   ];
 

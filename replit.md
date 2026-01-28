@@ -56,6 +56,16 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Added Pi Network Explorer section with 3 real-time data widgets
+- January 28, 2026: Created NetworkInfoWidget showing circulating supply, locked/unlocked mining, max supply
+- January 28, 2026: Created TopWalletsWidget displaying top 100 wallets by balance and activity
+- January 28, 2026: Created ReputationWidget showing on-chain verified reputation score
+- January 28, 2026: Added piNetworkData.ts service for fetching real blockchain data
+- January 28, 2026: Improved PointsBreakdown chart with donut design and side legend
+- January 28, 2026: Redesigned TokenPortfolio with circular chart and growth indicator
+- January 28, 2026: Enhanced PiDexSection with search, scrollable list for 10+ tokens
+- January 28, 2026: Added Network navigation item to sidebar
+- January 28, 2026: Integrated official Privacy Policy and Terms of Service content
 - January 28, 2026: Added Settings, Feedback, and Help pages with futuristic styling
 - January 28, 2026: Added Privacy Policy and Terms of Service sections in Profile
 - January 28, 2026: Centered homepage logo with improved layout

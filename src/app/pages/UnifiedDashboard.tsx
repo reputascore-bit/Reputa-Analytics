@@ -10,6 +10,7 @@ import { PiDexSection } from '../components/PiDexSection';
 import { TrustGauge } from '../components/TrustGauge';
 import { TransactionList } from '../components/TransactionList';
 import { AuditReport } from '../components/AuditReport';
+import { NetworkInfoWidget, TopWalletsWidget, ReputationWidget } from '../components/widgets';
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 
@@ -35,7 +36,7 @@ interface UnifiedDashboardProps {
   username?: string;
 }
 
-type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'profile' | 'settings' | 'feedback' | 'help' | 'privacy' | 'terms';
+type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'network' | 'profile' | 'settings' | 'feedback' | 'help' | 'privacy' | 'terms';
 
 export function UnifiedDashboard({ 
   walletData,
@@ -86,6 +87,7 @@ export function UnifiedDashboard({
       'audit': 'audit',
       'portfolio': 'portfolio',
       'wallet': 'wallet',
+      'network': 'network',
       'profile': 'profile',
       'settings': 'settings',
       'feedback': 'feedback',
@@ -127,6 +129,7 @@ export function UnifiedDashboard({
     { id: 'audit', icon: FileText, label: t('sidebar.audit') },
     { id: 'portfolio', icon: PieChart, label: t('sidebar.portfolio') },
     { id: 'wallet', icon: Wallet, label: t('sidebar.wallet') },
+    { id: 'network', icon: Globe, label: 'Network' },
   ];
 
   return (
@@ -528,6 +531,40 @@ export function UnifiedDashboard({
               consistencyScore={walletData.consistencyScore ?? 85}
               networkTrust={walletData.networkTrust ?? 90}
             />
+          </div>
+        )}
+
+        {activeSection === 'network' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Network Info Header */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-cyan-500/30">
+                  <Globe className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black uppercase tracking-wide text-white">Pi Network Explorer</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    Real-time blockchain data from {mode.mode === 'testnet' ? 'Testnet' : 'Mainnet'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Widgets Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Network Metrics */}
+              <NetworkInfoWidget isMainnet={mode.mode !== 'testnet'} />
+              
+              {/* Reputation Score */}
+              <ReputationWidget 
+                walletAddress={walletData.address} 
+                isMainnet={mode.mode !== 'testnet'} 
+              />
+              
+              {/* Top Wallets */}
+              <TopWalletsWidget isMainnet={mode.mode !== 'testnet'} />
+            </div>
           </div>
         )}
 

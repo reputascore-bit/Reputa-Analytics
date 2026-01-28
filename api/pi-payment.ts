@@ -6,7 +6,6 @@ const redis = new Redis({
 });
 
 const PI_API_KEY = process.env.PI_API_KEY;
-// بناءً على تجربتك الناجحة، سنبقي الرابط على Mainnet
 const PI_API_BASE = 'https://api.minepi.com/v2'; 
 
 export default async function handler(req: any, res: any) {
@@ -20,20 +19,19 @@ export default async function handler(req: any, res: any) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     
-    // تنظيف البيانات
     const paymentId = body.paymentId?.toString().trim();
     const action = body.action?.toString().trim();
     const txid = body.txid?.toString().trim();
-    const uid = body.uid;
-    
-    // استلام بيانات التحويل (App-to-User)
-    const address = body.address?.toString().trim();
-    const amount = body.amount;
+    const uid = body.uid; // الـ UID الحقيقي للمستخدم
 
-    // --- الجزء المضاف: معالجة التحويل للمستخدم (App-to-User) ---
+    // --- تعديل منطق الـ Payout لإصلاح خطأ user_not_found ---
     if (action === 'payout') {
-      console.log(`[PI-API] Processing App-to-User Payout to: ${address}`);
+      const { address, amount, memo } = body;
       
+      // ملاحظة: الـ uid هنا يجب أن يكون هو نفسه الـ uid الخاص بالمستخدم المسجل في Pi
+      // إذا لم يتوفر، نستخدم الـ uid القادم من الواجهة الأمامية
+      const targetUid = uid || body.pioneerUid; 
+
       const payoutResponse = await fetch(`${PI_API_BASE}/payments`, {
         method: 'POST',
         headers: {
@@ -43,33 +41,26 @@ export default async function handler(req: any, res: any) {
         body: JSON.stringify({
           payment: {
             amount: amount || 0.01,
-            memo: body.memo || "Reward",
+            memo: memo || "Reward payout",
             metadata: { type: "payout" },
-            uid: "payout_" + Date.now(),
+            uid: targetUid, // تغيير هام: استخدام UID حقيقي للمستخدم وليس نصاً عشوائياً
             recipient_address: address 
           }
         }),
       });
 
       const payoutData = await payoutResponse.json();
-      
       if (!payoutResponse.ok) {
         console.error("[PI-API] Payout Failed:", payoutData);
         return res.status(payoutResponse.status).json({ error: payoutData });
       }
-
       return res.status(200).json({ success: true, data: payoutData });
     }
-    // --- نهاية الجزء المضاف ---
 
-    if (!paymentId || !action) {
-      return res.status(400).json({ error: "Missing paymentId or action" });
-    }
+    // --- المسار التقليدي (Approve/Complete) ---
+    if (!paymentId || !action) return res.status(400).json({ error: "Missing data" });
 
     const url = `${PI_API_BASE}/payments/${paymentId}/${action}`;
-    
-    console.log(`[PI-API] Attempting ${action} for Payment ID: [${paymentId}]`);
-
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -80,24 +71,15 @@ export default async function handler(req: any, res: any) {
     });
 
     const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      console.error(`[PI-API] ${action} Failed with Status ${response.status}:`, data);
-      return res.status(response.status).json({ error: data });
+    
+    if (action === 'complete' && response.ok && uid) {
+      await redis.set(`vip_status:${uid}`, 'active');
+      await redis.incr('total_successful_payments');
     }
 
-    if (action === 'complete') {
-      console.log(`[PI-API] Payment ${paymentId} completed successfully!`);
-      if (uid) {
-        await redis.set(`vip_status:${uid}`, 'active');
-        await redis.incr('total_successful_payments');
-      }
-    }
-
-    return res.status(200).json({ success: true, data });
+    return res.status(response.status).json(data);
 
   } catch (error: any) {
-    console.error('[SERVER ERROR]:', error);
     return res.status(500).json({ error: error.message });
   }
 }

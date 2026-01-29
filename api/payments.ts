@@ -12,7 +12,10 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || '',
 });
 
-const PI_API_KEY = process.env.PI_API_KEY;
+const PI_NETWORK = process.env.PI_NETWORK || 'testnet';
+const PI_API_KEY = PI_NETWORK === 'mainnet' 
+  ? process.env.PI_API_KEY_MAINNET 
+  : process.env.PI_API_KEY;
 const PI_API_BASE = 'https://api.minepi.com/v2';
 
 function setCorsHeaders(res: VercelResponse) {
@@ -28,7 +31,7 @@ async function handleApprove(paymentId: string, res: VercelResponse) {
   }
 
   try {
-    const piResponse = await fetch(`https://api.mine.pi/v2/payments/${paymentId}/approve`, {
+    const piResponse = await fetch(`${PI_API_BASE}/payments/${paymentId}/approve`, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${PI_API_KEY}`,
@@ -37,10 +40,20 @@ async function handleApprove(paymentId: string, res: VercelResponse) {
     });
 
     const data = await piResponse.json();
-    console.log(`[APPROVE SUCCESS] Payment ${paymentId} approved`);
+    
+    if (!piResponse.ok) {
+      console.error(`[APPROVE ERROR] Payment ${paymentId}:`, data);
+      return res.status(piResponse.status).json({ 
+        error: 'Approval failed',
+        details: data
+      });
+    }
+    
+    console.log(`[APPROVE SUCCESS] Payment ${paymentId} approved on ${PI_NETWORK}`);
     
     return res.status(200).json({
       approved: true,
+      network: PI_NETWORK,
       ...data
     });
   } catch (error: any) {
@@ -86,13 +99,34 @@ async function handleComplete(body: any, res: VercelResponse) {
 }
 
 async function handlePayout(body: any, res: VercelResponse) {
-  const { address, amount, uid } = body;
+  const { address, amount, uid, memo } = body;
 
-  if (!uid || !address) {
-    return res.status(400).json({ error: "Missing UID or Address" });
+  if (!uid) {
+    return res.status(400).json({ error: "Missing UID - user must be authenticated" });
+  }
+  
+  if (!address || address.length < 20 || !address.startsWith('G')) {
+    return res.status(400).json({ error: "Invalid wallet address format" });
+  }
+
+  const payoutAmount = parseFloat(amount) || 0.01;
+  if (payoutAmount <= 0 || payoutAmount > 100) {
+    return res.status(400).json({ error: "Invalid payout amount (must be 0.01-100 Pi)" });
+  }
+
+  const idempotencyKey = `payout:${uid}:${Date.now()}`;
+  
+  const existingPayout = await redis.get(`payout_pending:${uid}`);
+  if (existingPayout) {
+    return res.status(409).json({ 
+      error: "A payout is already in progress for this user",
+      paymentId: existingPayout 
+    });
   }
 
   try {
+    console.log(`[PAYOUT] Initiating ${payoutAmount} Pi to ${address} for UID ${uid} on ${PI_NETWORK}`);
+    
     const response = await fetch(`${PI_API_BASE}/payments`, {
       method: 'POST',
       headers: { 
@@ -101,27 +135,57 @@ async function handlePayout(body: any, res: VercelResponse) {
       },
       body: JSON.stringify({
         payment: {
-          amount: amount || 0.01,
-          memo: "Reward Payout",
-          metadata: { type: "payout" },
-          uid: uid,
-          recipient_address: address
+          amount: payoutAmount,
+          memo: memo || "Reputa Score Reward Payout",
+          metadata: { 
+            type: "app_to_user_payout",
+            network: PI_NETWORK,
+            idempotencyKey,
+            timestamp: new Date().toISOString()
+          },
+          uid: uid
         }
       }),
     });
 
     const data = await response.json();
+    
     if (!response.ok) {
-      return res.status(response.status).json({ error: data });
+      console.error(`[PAYOUT ERROR] API response:`, data);
+      const errorMessage = data?.error_message || data?.message || 'Payment creation failed';
+      return res.status(response.status).json({ 
+        error: errorMessage,
+        details: data,
+        network: PI_NETWORK
+      });
     }
 
     if (data.identifier) {
-      await redis.set(`payout_sync:${uid}`, data.identifier);
+      await redis.set(`payout_pending:${uid}`, data.identifier, { ex: 3600 });
+      await redis.set(`payout_history:${data.identifier}`, JSON.stringify({
+        uid,
+        address,
+        amount: payoutAmount,
+        status: 'pending',
+        network: PI_NETWORK,
+        createdAt: new Date().toISOString()
+      }), { ex: 86400 * 30 });
     }
 
-    return res.status(200).json({ success: true, data });
+    console.log(`[PAYOUT SUCCESS] Payment ${data.identifier} created on ${PI_NETWORK}`);
+    
+    return res.status(200).json({ 
+      success: true, 
+      paymentId: data.identifier,
+      network: PI_NETWORK,
+      data 
+    });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[PAYOUT ERROR]', error.message);
+    return res.status(500).json({ 
+      error: "Network error - please try again",
+      details: error.message 
+    });
   }
 }
 
@@ -181,6 +245,57 @@ async function handlePiAction(paymentId: string, action: string, txid?: string, 
   return res?.status(resPi.status).json(dataPi);
 }
 
+async function handleClearPending(body: any, res: VercelResponse) {
+  const { uid } = body;
+  
+  if (!uid) {
+    return res.status(400).json({ error: "Missing UID" });
+  }
+  
+  try {
+    await redis.del(`payout_pending:${uid}`);
+    console.log(`[PAYOUT] Cleared pending payout for ${uid}`);
+    return res.status(200).json({ success: true, message: "Pending payout cleared" });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+async function handleCheckPayoutStatus(body: any, res: VercelResponse) {
+  const { uid, paymentId } = body;
+  
+  if (!uid && !paymentId) {
+    return res.status(400).json({ error: "Missing UID or paymentId" });
+  }
+  
+  try {
+    if (paymentId) {
+      const history = await redis.get(`payout_history:${paymentId}`);
+      const piResponse = await fetch(`${PI_API_BASE}/payments/${paymentId}`, {
+        headers: { 'Authorization': `Key ${PI_API_KEY}` }
+      });
+      const piData = await piResponse.json();
+      
+      return res.status(200).json({
+        paymentId,
+        history: history ? JSON.parse(history as string) : null,
+        piStatus: piData,
+        network: PI_NETWORK
+      });
+    }
+    
+    const pendingId = await redis.get(`payout_pending:${uid}`);
+    return res.status(200).json({
+      uid,
+      hasPending: !!pendingId,
+      pendingPaymentId: pendingId,
+      network: PI_NETWORK
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res);
 
@@ -208,6 +323,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       case 'send':
         return handleSendPi(body, res);
+      
+      case 'clear_pending':
+        return handleClearPending(body, res);
+      
+      case 'check_status':
+        return handleCheckPayoutStatus(body, res);
       
       default:
         if (paymentId && action) {

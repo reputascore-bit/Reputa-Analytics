@@ -4,9 +4,15 @@
 
 import type { PaymentData } from './types';
 
+interface PiSDK {
+  init: (options: { version: string }) => Promise<void>;
+  authenticate: (scopes: string[], onIncomplete: (payment: any) => void) => Promise<{ user: { uid: string; username: string } }>;
+  createPayment: (config: any, callbacks: any) => Promise<{ identifier: string }>;
+}
+
 declare global {
   interface Window {
-    Pi?: any;
+    Pi?: PiSDK;
   }
 }
 

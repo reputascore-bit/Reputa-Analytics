@@ -110,6 +110,11 @@ function ReputaAppContent() {
 
   // الوظيفة المسؤولة عن تحويل المال من التطبيق للمحفظة (App-to-User)
   const handleRewardPayout = async () => {
+    if (!piBrowser) {
+      alert("This feature only works inside Pi Browser");
+      return;
+    }
+
     const targetAddress = manualWallet.trim();
     
     if (!targetAddress || targetAddress.length < 20 || !targetAddress.startsWith('G')) {
@@ -122,18 +127,31 @@ function ReputaAppContent() {
       return;
     }
 
-    // --- التعديل المطلوب: تنظيف العمليات المعلقة قبل البدء ---
-    try {
-      // محاولة إلغاء أي دفع معلق في الـ SDK لمنع تعارض الحالات
-      if ((window as any).Pi) {
-        await (window as any).Pi.cancelPayment("current_id").catch(() => {});
-      }
-    } catch (e) {
-      console.warn("Cleanup ignored");
-    }
-
     setIsPayoutLoading(true);
+    
     try {
+      const statusCheck = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check_status', uid: currentUser.uid }),
+      }).then(r => r.json()).catch(() => null);
+      
+      if (statusCheck?.hasPending) {
+        const clearPending = confirm(
+          "You have a pending payout. Would you like to clear it and try again?"
+        );
+        if (clearPending) {
+          await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'clear_pending', uid: currentUser.uid }),
+          });
+        } else {
+          setIsPayoutLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,12 +166,16 @@ function ReputaAppContent() {
 
       const result = await response.json();
 
-      if (response.ok) {
-        alert("✅ Payout Successful! Check your wallet.");
+      if (response.ok && result.success) {
+        const networkLabel = result.network === 'mainnet' ? 'Mainnet' : 'Testnet';
+        alert(`✅ Payout Initiated on ${networkLabel}!\nPayment ID: ${result.paymentId}\nCheck your wallet shortly.`);
         setManualWallet('');
+      } else if (response.status === 409) {
+        alert("⚠️ A payout is already in progress. Please wait or clear the pending payment.");
       } else {
-        // التعامل مع رسالة Ongoing Payment القادمة من السيرفر
-        const errorDetail = result.error?.error_message || result.error || "Check App Wallet balance";
+        const errorDetail = typeof result.error === 'string' 
+          ? result.error 
+          : result.error?.error_message || result.details?.message || "Check App Wallet balance";
         alert(`❌ Payout Failed: ${errorDetail}`);
       }
     } catch (e) {

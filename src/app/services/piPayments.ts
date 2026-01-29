@@ -1,8 +1,12 @@
+interface PiPaymentSDK {
+  init?: (options: { version: string }) => Promise<void>;
+  authenticate?: (scopes: string[], onIncomplete: (payment: any) => void) => Promise<{ user: { uid: string; username: string } }>;
+  createPayment: (config: any, callbacks: any) => Promise<{ identifier: string } | void>;
+}
+
 declare global {
   interface Window {
-    Pi?: {
-      createPayment: (config: any, callbacks: any) => Promise<void>;
-    };
+    Pi?: PiPaymentSDK;
   }
 }
 

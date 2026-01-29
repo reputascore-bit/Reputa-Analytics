@@ -59,6 +59,14 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
   - Text Secondary: rgba(160, 164, 184, 0.8)
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
+## Points System Architecture
+- **userPoints state**: { total, checkIn, transactions, activity, streak }
+- **Point types**: 'checkin' (3 pts) and 'ad' (5 pts bonus)
+- **Storage**: localStorage key 'userPointsState' for persistence
+- **Legacy migration**: Converts 'dailyCheckInState' to new format (checkIn/activity split)
+- **Level calculation**: atomicResult.adjustedScore + earnedPoints (no double-counting)
+- **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
+
 ## Atomic Scoring Protocol (Single Source of Truth)
 - **File**: `src/app/protocol/atomicScoring.ts` - THE ONLY scoring engine
 - **Deprecated**: `scoring.ts` is DEPRECATED - do NOT import
@@ -75,10 +83,6 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
   - `TRUST_LEVEL_COLORS` - Color palette for each level
 
 ## Recent Changes
-- January 28, 2026: REMOVED Total Points system - Reputa Score is now the ONLY scoring metric
-- January 28, 2026: Removed DailyCheckIn, PointsExplainer, and User Points card from ProfileSection
-- January 28, 2026: Removed userPoints state and localStorage persistence from UnifiedDashboard
-- January 28, 2026: Level progression now calculated solely from atomicResult.adjustedScore
 - January 28, 2026: Unified all scoring under atomicScoring.ts as single source of truth
 - January 28, 2026: Deprecated scoring.ts - all components now use atomic scoring
 - January 28, 2026: Exported mapAtomicToTrustLevel() and LEVEL_NAMES from atomicScoring.ts

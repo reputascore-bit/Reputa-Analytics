@@ -180,8 +180,12 @@ async function handleComplete(body: any, res: VercelResponse) {
 async function handlePayout(body: any, res: VercelResponse) {
   const { address, amount, uid, memo, eventId } = body;
 
+  if (!PI_API_KEY) {
+    return res.status(500).json({ error: "PI_API_KEY not configured for A2U payments" });
+  }
+
   if (!APP_WALLET_SEED) {
-    return res.status(500).json({ error: "Server not configured for A2U payments" });
+    return res.status(500).json({ error: "APP_WALLET_SEED not configured for A2U payments" });
   }
 
   if (!uid) {
@@ -198,7 +202,8 @@ async function handlePayout(body: any, res: VercelResponse) {
   }
 
   const amountCents = Math.round(payoutAmount * 100);
-  const idempotencyKey = `payout:${uid}:${amountCents}:reputa_reward`;
+  const payoutEvent = eventId || 'reputa_reward';
+  const idempotencyKey = `payout:${uid}:${amountCents}:${payoutEvent}`;
   
   const existingIdempotent = await redis.get(`idempotent:${idempotencyKey}`);
   if (existingIdempotent) {
@@ -275,7 +280,36 @@ async function handlePayout(body: any, res: VercelResponse) {
       network: PI_NETWORK, idempotencyKey, createdAt: new Date().toISOString()
     }), { ex: 86400 * 30 });
 
-    console.log(`[A2U] Step 2: Submitting blockchain transaction...`);
+    console.log(`[A2U] Step 2: Approving payment...`);
+    
+    const approveResponse = await fetch(`${PI_API_BASE}/payments/${paymentId}/approve`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Key ${PI_API_KEY}`, 
+        'Content-Type': 'application/json' 
+      }
+    });
+
+    const approveData = await approveResponse.json();
+    
+    if (!approveResponse.ok) {
+      console.error(`[A2U] Step 2 FAILED:`, approveData);
+      await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+        uid, address: recipientAddress, amount: payoutAmount, status: 'approve_failed',
+        network: PI_NETWORK, error: approveData.message || 'Approval failed', createdAt: new Date().toISOString()
+      }), { ex: 86400 * 30 });
+      
+      return res.status(approveResponse.status).json({ 
+        error: approveData.message || 'Payment approval failed',
+        step: 'approve',
+        paymentId,
+        network: PI_NETWORK
+      });
+    }
+    
+    console.log(`[A2U] Step 2 SUCCESS: Payment ${paymentId} approved`);
+
+    console.log(`[A2U] Step 3: Submitting blockchain transaction...`);
     
     const txResult = await submitA2UTransaction(
       recipientAddress,
@@ -285,7 +319,7 @@ async function handlePayout(body: any, res: VercelResponse) {
     );
     
     if ('error' in txResult) {
-      console.error(`[A2U] Step 2 FAILED:`, txResult.error);
+      console.error(`[A2U] Step 3 FAILED:`, txResult.error);
       await redis.set(`payout_history:${paymentId}`, JSON.stringify({
         uid, address: recipientAddress, amount: payoutAmount, status: 'tx_failed',
         network: PI_NETWORK, error: txResult.error, createdAt: new Date().toISOString()
@@ -300,14 +334,14 @@ async function handlePayout(body: any, res: VercelResponse) {
     }
     
     txid = txResult.txid;
-    console.log(`[A2U] Step 2 SUCCESS: Transaction ${txid} submitted`);
+    console.log(`[A2U] Step 3 SUCCESS: Transaction ${txid} submitted`);
 
-    console.log(`[A2U] Step 3: Completing payment on Pi server...`);
+    console.log(`[A2U] Step 4: Completing payment on Pi server...`);
     
     const completeResult = await completeA2UPayment(paymentId as string, txid);
     
     if (!completeResult.success) {
-      console.error(`[A2U] Step 3 FAILED:`, completeResult.error);
+      console.error(`[A2U] Step 4 FAILED:`, completeResult.error);
       await redis.set(`payout_history:${paymentId}`, JSON.stringify({
         uid, address: recipientAddress, amount: payoutAmount, status: 'complete_failed',
         network: PI_NETWORK, txid, error: completeResult.error, createdAt: new Date().toISOString()
@@ -322,7 +356,7 @@ async function handlePayout(body: any, res: VercelResponse) {
       });
     }
     
-    console.log(`[A2U] Step 3 SUCCESS: Payment completed!`);
+    console.log(`[A2U] Step 4 SUCCESS: Payment completed!`);
     
     await redis.del(`payout_pending:${uid}`);
     

@@ -11,20 +11,20 @@ The application is built with React 18, TypeScript, Vite 6, and Tailwind CSS 4.1
 
 **UI/UX Decisions:**
 - **Theme:** Dark, futuristic dashboard with a strong emphasis on glassmorphism and neon glow effects.
-- **Color Palette:** Primary background from #0A0B0F to #0F1117, card backgrounds with blurred rgba(30, 33, 40, 0.6), accented with #00D9FF (cyan) and #8B5CF6 (purple). Text is primarily white or light gray.
+- **Color Palette (Web3 Minimal):** Primary background #0A0B0F to #0F1117. Main accent: Purple (#8B5CF6). Secondary accent: Cyan (#00D9FF). Minimal use of other colors - only for status indicators (success green, warning orange, error red). Text is white with varying opacity.
 - **Typography:** Uses Inter, Space Grotesk, and JetBrains Mono fonts for a professional and futuristic aesthetic.
 - **Navigation:** Features a bottom navigation bar on mobile and a traditional sidebar on desktop, ensuring touch-friendly targets and safe area insets for notched devices.
 
 **Technical Implementations:**
 - **Pi Browser Integration:** Detects the Pi Browser via user agent, falling back to a guest mode for other browsers. Integrates with Pi SDK v2.0 for authentication (username, payments, wallet_address) and uses a gold-themed login button.
 - **Atomic Scoring Protocol:** A centralized scoring engine (`src/app/protocol/atomicScoring.ts`) calculates a 7-level trust hierarchy based on various on-chain activities (wallet age, interaction, staking, etc.). This protocol is the single source of truth for reputation scores, deprecating any other scoring logic.
-- **Points System:** Users earn points through activities like daily check-ins and ad viewing, persisted via `localStorage` with a legacy migration path. Points contribute to level calculation but are capped at 10,000 for level thresholds.
+- **Unified Points System:** Points from daily check-ins and ad viewing are now integrated directly into the Atomic Reputation Protocol. The `atomicResult` calculation includes earned points, ensuring a single source of truth for all scoring. Points are persisted via `localStorage` with legacy migration support.
 - **API Architecture:** Serverless functions (Vercel) handle API requests, primarily for the Top 100 Wallets. These APIs implement robust data fetching strategies including auto-refresh, smart caching, circuit breaker patterns, exponential backoff, and rate limiting.
 - **Internationalization:** Supports multi-language (EN, AR, FR, ZH) with RTL compatibility.
 - **Component Design:** Utilizes MUI and Radix UI components, enhanced with Framer Motion for animations. Key components include `WalletChecker`, `WalletAnalysis`, `TrustGauge`, and `MobileBottomNav`.
 
 **Feature Specifications:**
-- **Unified Dashboard:** Combines wallet analysis and analytics into a single interface with tabbed navigation for Overview, Analytics, Transactions, Audit, and Portfolio.
+- **Unified Dashboard:** Combines wallet analysis and analytics into a single interface. Each section displays its own header (e.g., "Reputa Score", "Analytics", "Activity") instead of showing "Dashboard" everywhere. Bottom navigation on mobile, tab navigation on desktop.
 - **Reputation Page:** Dedicated page for detailed score breakdown, trust benefits, and wallet analysis.
 - **Network Explorer:** Provides real-time Pi Network data through widgets for circulating supply, locked/unlocked mining, and top wallets.
 - **User Profile:** Displays user information, stats, and activity summaries.

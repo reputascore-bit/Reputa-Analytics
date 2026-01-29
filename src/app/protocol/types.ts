@@ -200,9 +200,64 @@ export interface ChartReputationScore {
   recommendations: string[];
 }
 
+export type NetworkMode = 'mainnet' | 'testnet' | 'demo';
+
 export interface AppMode {
-  mode: 'demo' | 'testnet';
+  mode: NetworkMode;
   connected: boolean;
+  walletAddress?: string;
 }
+
+export interface ModeImpact {
+  mode: NetworkMode;
+  label: string;
+  labelAr: string;
+  description: string;
+  descriptionAr: string;
+  reputationImpact: 'full' | 'partial' | 'none';
+  impactPercentage: number;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+}
+
+export const MODE_IMPACTS: Record<NetworkMode, ModeImpact> = {
+  mainnet: {
+    mode: 'mainnet',
+    label: 'Mainnet',
+    labelAr: 'الشبكة الرئيسية',
+    description: 'Full reputation impact from real blockchain data',
+    descriptionAr: 'تأثير كامل على السمعة من بيانات البلوكشين الحقيقية',
+    reputationImpact: 'full',
+    impactPercentage: 100,
+    color: '#10B981',
+    bgColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: 'rgba(16, 185, 129, 0.4)'
+  },
+  testnet: {
+    mode: 'testnet',
+    label: 'Testnet',
+    labelAr: 'شبكة الاختبار',
+    description: 'Partial reputation impact (supplementary data)',
+    descriptionAr: 'تأثير جزئي على السمعة (بيانات مكملة)',
+    reputationImpact: 'partial',
+    impactPercentage: 25,
+    color: '#F59E0B',
+    bgColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: 'rgba(245, 158, 11, 0.4)'
+  },
+  demo: {
+    mode: 'demo',
+    label: 'Demo',
+    labelAr: 'وضع التجربة',
+    description: 'No reputation impact (simulation only)',
+    descriptionAr: 'بدون تأثير على السمعة (محاكاة فقط)',
+    reputationImpact: 'none',
+    impactPercentage: 0,
+    color: '#6B7280',
+    bgColor: 'rgba(107, 114, 128, 0.15)',
+    borderColor: 'rgba(107, 114, 128, 0.4)'
+  }
+};
 
 export type Language = 'ar' | 'fr' | 'zh' | 'en';

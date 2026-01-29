@@ -26,7 +26,8 @@ import {
   processTokenPortfolio,
   generateMockChartData 
 } from '../services/chartDataProcessor';
-import { AppMode, ChartDataPoint, ChartReputationScore, TokenBalance, Language, WalletData, TrustLevel, AtomicTrustLevel } from '../protocol/types';
+import { AppMode, ChartDataPoint, ChartReputationScore, TokenBalance, Language, WalletData, TrustLevel, AtomicTrustLevel, NetworkMode, MODE_IMPACTS } from '../protocol/types';
+import { ModeIndicator, ModeStatusBadge } from '../components/ModeIndicator';
 import { 
   calculateAtomicReputation, 
   generateDemoActivityData, 
@@ -176,11 +177,28 @@ export function UnifiedDashboard({
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
 
+  const handleModeChange = (newMode: NetworkMode) => {
+    if (newMode === 'demo') {
+      setMode({ mode: 'demo', connected: false });
+    } else {
+      setMode(prev => ({ 
+        mode: newMode, 
+        connected: true,
+        walletAddress: walletData.address
+      }));
+    }
+  };
+
   const handleModeToggle = () => {
-    setMode(prev => ({
-      mode: prev.mode === 'demo' ? 'testnet' : 'demo',
-      connected: prev.mode === 'demo' ? true : false,
-    }));
+    const modes: NetworkMode[] = ['demo', 'testnet', 'mainnet'];
+    const currentIndex = modes.indexOf(mode.mode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    handleModeChange(modes[nextIndex]);
+  };
+
+  const getReputationWithModeImpact = (baseScore: number): number => {
+    const impact = MODE_IMPACTS[mode.mode];
+    return Math.round(baseScore * (impact.impactPercentage / 100));
   };
 
   const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
@@ -271,6 +289,8 @@ export function UnifiedDashboard({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <ModeStatusBadge mode={mode.mode} compact />
+            
             {!isProUser && (
               <Button 
                 onClick={onUpgradePrompt} 
@@ -900,16 +920,72 @@ export function UnifiedDashboard({
 
         {activeSection === 'settings' && (
           <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Network Mode Selection */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <Globe className="w-6 h-6 text-cyan-400" />
+                <div>
+                  <h2 className="text-lg font-black uppercase tracking-wide text-white">
+                    {language === 'ar' ? 'وضع الشبكة' : 'Network Mode'}
+                  </h2>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                    {language === 'ar' ? 'اختر وضع التشغيل للسمعة' : 'Select operating mode for reputation'}
+                  </p>
+                </div>
+              </div>
+              
+              <ModeIndicator
+                currentMode={mode.mode}
+                connected={mode.connected}
+                onModeChange={handleModeChange}
+              />
+              
+              <div className="mt-4 p-3 rounded-lg" style={{ 
+                background: MODE_IMPACTS[mode.mode].bgColor,
+                border: `1px solid ${MODE_IMPACTS[mode.mode].borderColor}`
+              }}>
+                <div className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 mt-0.5" style={{ color: MODE_IMPACTS[mode.mode].color }} />
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: MODE_IMPACTS[mode.mode].color }}>
+                      {language === 'ar' ? 'تأثير السمعة' : 'Reputation Impact'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {mode.mode === 'mainnet' && (language === 'ar' 
+                        ? 'سمعتك تُحسب بالكامل من بيانات الشبكة الرئيسية الحقيقية'
+                        : 'Your reputation is fully calculated from real mainnet data'
+                      )}
+                      {mode.mode === 'testnet' && (language === 'ar'
+                        ? 'نشاط Testnet يضيف 25% فقط كنقاط مكملة'
+                        : 'Testnet activity adds only 25% as supplementary points'
+                      )}
+                      {mode.mode === 'demo' && (language === 'ar'
+                        ? 'هذا وضع تجريبي - لا يؤثر على سمعتك الحقيقية'
+                        : 'This is demo mode - no impact on your real reputation'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Other Settings */}
             <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
               <div className="flex items-center gap-3 mb-6">
                 <Settings className="w-6 h-6 text-purple-400" />
-                <h2 className="text-lg font-black uppercase tracking-wide text-white">Settings</h2>
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">
+                  {language === 'ar' ? 'الإعدادات' : 'Settings'}
+                </h2>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                   <div>
-                    <p className="text-sm font-bold text-white uppercase tracking-wide">Dark Mode</p>
-                    <p className="text-[10px] text-gray-400">System preference enabled</p>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'الوضع الداكن' : 'Dark Mode'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'مفعّل حسب إعدادات النظام' : 'System preference enabled'}
+                    </p>
                   </div>
                   <div className="w-12 h-6 bg-purple-600 rounded-full relative">
                     <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
@@ -917,8 +993,12 @@ export function UnifiedDashboard({
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
                   <div>
-                    <p className="text-sm font-bold text-white uppercase tracking-wide">Push Notifications</p>
-                    <p className="text-[10px] text-gray-400">Receive alerts for important activity</p>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'الإشعارات' : 'Push Notifications'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'استلام تنبيهات للنشاط المهم' : 'Receive alerts for important activity'}
+                    </p>
                   </div>
                   <div className="w-12 h-6 bg-gray-700 rounded-full relative">
                     <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />

@@ -1,158 +1,154 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Gift, Play, Clock, CheckCircle, Star, Zap } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Calendar, Gift, Play, Clock, CheckCircle, Star, Zap, ArrowUpRight, Merge } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { reputationService, UserReputationState } from '../services/reputationService';
 
 interface DailyCheckInProps {
-  onPointsEarned: (points: number, type: 'checkin' | 'ad') => void;
+  userId?: string;
+  onPointsEarned?: (points: number, type: 'checkin' | 'ad' | 'merge') => void;
+  onStateChange?: (state: UserReputationState) => void;
   isDemo?: boolean;
-}
-
-interface CheckInState {
-  lastCheckIn: string | null;
-  lastAdWatch: string | null;
-  lastCheckInId: string | null;
-  adClaimedForCheckIn: string | null;
-  totalCheckIns: number;
-  streak: number;
-  totalPointsFromCheckIn: number;
-  totalPointsFromAds: number;
-  streakBonusPoints: number;
 }
 
 const CHECKIN_POINTS = 3;
 const AD_BONUS_POINTS = 5;
-const COOLDOWN_HOURS = 24;
 
-export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInProps) {
+export function DailyCheckIn({ userId, onPointsEarned, onStateChange, isDemo = false }: DailyCheckInProps) {
   const { t } = useLanguage();
-  const [checkInState, setCheckInState] = useState<CheckInState>({
-    lastCheckIn: null,
-    lastAdWatch: null,
-    lastCheckInId: null,
-    adClaimedForCheckIn: null,
-    totalCheckIns: 0,
-    streak: 0,
-    totalPointsFromCheckIn: 0,
-    totalPointsFromAds: 0,
-    streakBonusPoints: 0,
-  });
+  const [state, setState] = useState<UserReputationState | null>(null);
   const [canCheckIn, setCanCheckIn] = useState(true);
   const [canWatchAd, setCanWatchAd] = useState(false);
   const [countdown, setCountdown] = useState('');
   const [isWatchingAd, setIsWatchingAd] = useState(false);
-  const [showSuccess, setShowSuccess] = useState<'checkin' | 'ad' | null>(null);
+  const [isMerging, setIsMerging] = useState(false);
+  const [showSuccess, setShowSuccess] = useState<'checkin' | 'ad' | 'merge' | null>(null);
+  const [mergedAmount, setMergedAmount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isDemo) {
-      return;
+    async function loadState() {
+      if (isDemo) {
+        setState({
+          uid: 'demo',
+          reputationScore: 150,
+          dailyCheckInPoints: 45,
+          totalCheckInDays: 15,
+          lastCheckIn: null,
+          lastAdWatch: null,
+          streak: 5,
+          adClaimedForCheckIn: null,
+          lastCheckInId: null,
+          interactionHistory: [],
+          lastUpdated: null,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const uid = userId || localStorage.getItem('piUserId') || `user_${Date.now()}`;
+      const loadedState = await reputationService.loadUserReputation(uid);
+      setState(loadedState);
+      setIsLoading(false);
     }
-    const savedState = localStorage.getItem('dailyCheckInState');
-    if (savedState) {
-      const parsed = JSON.parse(savedState) as CheckInState;
-      setCheckInState(parsed);
-      updateAvailability(parsed);
-    }
-  }, [isDemo]);
+
+    loadState();
+  }, [userId, isDemo]);
+
+  const updateAvailability = useCallback(() => {
+    if (!state) return;
+
+    const result = reputationService.canCheckIn();
+    setCanCheckIn(result.canCheckIn);
+    setCountdown(result.countdown);
+    setCanWatchAd(!result.canCheckIn && reputationService.canClaimAdBonus());
+  }, [state]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      updateAvailability(checkInState);
-    }, 1000);
+    updateAvailability();
+    const interval = setInterval(updateAvailability, 1000);
     return () => clearInterval(interval);
-  }, [checkInState]);
+  }, [updateAvailability]);
 
-  const updateAvailability = (state: CheckInState) => {
-    const now = new Date();
-    
-    if (state.lastCheckIn) {
-      const lastCheckInDate = new Date(state.lastCheckIn);
-      const timeDiff = now.getTime() - lastCheckInDate.getTime();
-      const hoursDiff = timeDiff / (1000 * 60 * 60);
-      
-      if (hoursDiff < COOLDOWN_HOURS) {
-        setCanCheckIn(false);
-        const remainingMs = (COOLDOWN_HOURS * 60 * 60 * 1000) - timeDiff;
-        const hours = Math.floor(remainingMs / (1000 * 60 * 60));
-        const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
-        setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-        
-        const adNotClaimedForThisCheckIn = state.adClaimedForCheckIn !== state.lastCheckInId;
-        setCanWatchAd(adNotClaimedForThisCheckIn);
-      } else {
-        setCanCheckIn(true);
-        setCanWatchAd(false);
-        setCountdown('');
+  const handleCheckIn = async () => {
+    if (isDemo || !state) return;
+
+    try {
+      const result = await reputationService.performDailyCheckIn();
+      if (result.success) {
+        setState(result.newState);
+        onPointsEarned?.(result.pointsEarned, 'checkin');
+        onStateChange?.(result.newState);
+        setShowSuccess('checkin');
+        setTimeout(() => setShowSuccess(null), 3000);
+        updateAvailability();
       }
-    } else {
-      setCanCheckIn(true);
-      setCanWatchAd(false);
-      setCountdown('');
+    } catch (error) {
+      console.error('Check-in error:', error);
     }
   };
 
-  const handleCheckIn = () => {
-    const now = new Date();
-    const lastDate = checkInState.lastCheckIn ? new Date(checkInState.lastCheckIn) : null;
-    const checkInId = `checkin_${now.getTime()}`;
-    
-    let newStreak = 1;
-    let streakBonus = 0;
-    if (lastDate) {
-      const hoursDiff = (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60);
-      if (hoursDiff >= 24 && hoursDiff < 48) {
-        newStreak = checkInState.streak + 1;
-        if (newStreak === 7) {
-          streakBonus = 10;
-        }
-      }
-    }
+  const handleWatchAd = async () => {
+    if (isDemo || !state) return;
 
-    const newState: CheckInState = {
-      lastCheckIn: now.toISOString(),
-      lastAdWatch: checkInState.lastAdWatch,
-      lastCheckInId: checkInId,
-      adClaimedForCheckIn: checkInState.adClaimedForCheckIn,
-      totalCheckIns: checkInState.totalCheckIns + 1,
-      streak: newStreak,
-      totalPointsFromCheckIn: checkInState.totalPointsFromCheckIn + CHECKIN_POINTS,
-      totalPointsFromAds: checkInState.totalPointsFromAds,
-      streakBonusPoints: checkInState.streakBonusPoints + streakBonus,
-    };
-
-    setCheckInState(newState);
-    if (!isDemo) {
-      localStorage.setItem('dailyCheckInState', JSON.stringify(newState));
-    }
-    onPointsEarned(CHECKIN_POINTS + streakBonus, 'checkin');
-    setShowSuccess('checkin');
-    setTimeout(() => setShowSuccess(null), 3000);
-    updateAvailability(newState);
-  };
-
-  const handleWatchAd = () => {
     setIsWatchingAd(true);
     
-    setTimeout(() => {
-      const now = new Date();
-      const newState: CheckInState = {
-        ...checkInState,
-        lastAdWatch: now.toISOString(),
-        adClaimedForCheckIn: checkInState.lastCheckInId,
-        totalPointsFromAds: checkInState.totalPointsFromAds + AD_BONUS_POINTS,
-      };
-
-      setCheckInState(newState);
-      if (!isDemo) {
-        localStorage.setItem('dailyCheckInState', JSON.stringify(newState));
+    setTimeout(async () => {
+      try {
+        const result = await reputationService.claimAdBonus();
+        if (result.success) {
+          setState(result.newState);
+          onPointsEarned?.(result.pointsEarned, 'ad');
+          onStateChange?.(result.newState);
+          setShowSuccess('ad');
+          setTimeout(() => setShowSuccess(null), 3000);
+        }
+      } catch (error) {
+        console.error('Ad bonus error:', error);
       }
-      onPointsEarned(AD_BONUS_POINTS, 'ad');
       setIsWatchingAd(false);
-      setShowSuccess('ad');
-      setTimeout(() => setShowSuccess(null), 3000);
-      updateAvailability(newState);
+      updateAvailability();
     }, 3000);
   };
+
+  const handleMergePoints = async () => {
+    if (isDemo || !state || state.dailyCheckInPoints <= 0) return;
+
+    setIsMerging(true);
+    
+    try {
+      const pointsToMerge = state.dailyCheckInPoints;
+      const result = await reputationService.mergeCheckInPointsToReputation();
+      if (result.success) {
+        setMergedAmount(pointsToMerge);
+        setState(result.newState);
+        onPointsEarned?.(pointsToMerge, 'merge');
+        onStateChange?.(result.newState);
+        setShowSuccess('merge');
+        setTimeout(() => {
+          setShowSuccess(null);
+          setMergedAmount(0);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Merge error:', error);
+    }
+    
+    setIsMerging(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="glass-card p-6 flex items-center justify-center min-h-[200px]">
+        <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!state) {
+    return null;
+  }
+
+  const canMerge = state.dailyCheckInPoints > 0;
 
   return (
     <div 
@@ -192,10 +188,45 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
             <div className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30">
               <span className="text-xs font-bold text-amber-400">
                 <Zap className="w-3 h-3 inline mr-1" />
-                {checkInState.streak} day streak
+                {state.streak} day streak
               </span>
             </div>
           </div>
+        </div>
+
+        <div className="mb-4 p-3 rounded-xl bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">
+                Pending Check-in Points
+              </p>
+              <p className="text-2xl font-black text-cyan-400">
+                {state.dailyCheckInPoints}
+                <span className="text-xs ml-1 text-gray-500">pts</span>
+              </p>
+            </div>
+            <button
+              onClick={handleMergePoints}
+              disabled={!canMerge || isMerging || isDemo}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+                canMerge && !isMerging
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:opacity-90 hover:scale-[1.02]'
+                  : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isMerging ? (
+                <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Merge className="w-4 h-4" />
+                  Merge to Reputation
+                </>
+              )}
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-500 mt-2">
+            Merge your check-in points weekly to boost your main reputation score
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -225,7 +256,8 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
             {canCheckIn ? (
               <button
                 onClick={handleCheckIn}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold transition-all hover:opacity-90 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                disabled={isDemo}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold transition-all hover:opacity-90 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
               >
                 <CheckCircle className="w-4 h-4 inline mr-2" />
                 Claim Daily Reward
@@ -267,7 +299,7 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
             {canWatchAd ? (
               <button
                 onClick={handleWatchAd}
-                disabled={isWatchingAd}
+                disabled={isWatchingAd || isDemo}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold transition-all hover:opacity-90 hover:scale-[1.02] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               >
                 {isWatchingAd ? (
@@ -285,9 +317,9 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
             ) : (
               <div className="text-center py-2">
                 <p className="text-xs text-gray-500">
-                  {!checkInState.lastCheckIn 
+                  {!state.lastCheckIn 
                     ? 'Check in first to unlock'
-                    : checkInState.adClaimedForCheckIn === checkInState.lastCheckInId
+                    : state.adClaimedForCheckIn === state.lastCheckInId
                       ? 'Already claimed for this check-in'
                       : 'Check in to unlock bonus'}
                 </p>
@@ -299,12 +331,10 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
         <div className="mt-4 pt-4 border-t border-white/5">
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-500">
-              Total check-ins: <span className="text-amber-400 font-bold">{checkInState.totalCheckIns}</span>
+              Total check-ins: <span className="text-amber-400 font-bold">{state.totalCheckInDays}</span>
             </span>
             <span className="text-gray-500">
-              Total earned: <span className="text-emerald-400 font-bold">
-                {checkInState.totalPointsFromCheckIn + checkInState.totalPointsFromAds + checkInState.streakBonusPoints} pts
-              </span>
+              Reputation: <span className="text-emerald-400 font-bold">{state.reputationScore} pts</span>
             </span>
           </div>
         </div>
@@ -320,19 +350,33 @@ export function DailyCheckIn({ onPointsEarned, isDemo = false }: DailyCheckInPro
               style={{
                 background: showSuccess === 'checkin' 
                   ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                  : 'linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)',
+                  : showSuccess === 'ad'
+                    ? 'linear-gradient(135deg, #8B5CF6 0%, #A855F7 100%)'
+                    : 'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
                 boxShadow: showSuccess === 'checkin'
                   ? '0 0 40px rgba(16, 185, 129, 0.5)'
-                  : '0 0 40px rgba(139, 92, 246, 0.5)',
+                  : showSuccess === 'ad'
+                    ? '0 0 40px rgba(139, 92, 246, 0.5)'
+                    : '0 0 40px rgba(6, 182, 212, 0.5)',
               }}
             >
-              <Star className="w-8 h-8 text-white" />
+              {showSuccess === 'merge' ? (
+                <ArrowUpRight className="w-8 h-8 text-white" />
+              ) : (
+                <Star className="w-8 h-8 text-white" />
+              )}
             </div>
             <p className="text-2xl font-black text-white mb-1">
-              +{showSuccess === 'checkin' ? CHECKIN_POINTS : AD_BONUS_POINTS} Points!
+              {showSuccess === 'merge' 
+                ? `+${mergedAmount} Reputation!`
+                : `+${showSuccess === 'checkin' ? CHECKIN_POINTS : AD_BONUS_POINTS} Points!`}
             </p>
             <p className="text-sm text-gray-400">
-              {showSuccess === 'checkin' ? 'Daily check-in complete!' : 'Ad bonus claimed!'}
+              {showSuccess === 'checkin' 
+                ? 'Daily check-in complete!'
+                : showSuccess === 'ad'
+                  ? 'Ad bonus claimed!'
+                  : 'Points merged to reputation!'}
             </p>
           </div>
         </div>

@@ -99,7 +99,7 @@ async function handleComplete(body: any, res: VercelResponse) {
 }
 
 async function handlePayout(body: any, res: VercelResponse) {
-  const { address, amount, uid, memo } = body;
+  const { address, amount, uid, memo, eventId } = body;
 
   if (!uid) {
     return res.status(400).json({ error: "Missing UID - user must be authenticated" });
@@ -114,7 +114,21 @@ async function handlePayout(body: any, res: VercelResponse) {
     return res.status(400).json({ error: "Invalid payout amount (must be 0.01-100 Pi)" });
   }
 
-  const idempotencyKey = `payout:${uid}:${Date.now()}`;
+  const amountCents = Math.round(payoutAmount * 100);
+  const idempotencyKey = `payout:${uid}:${amountCents}:reputa_reward`;
+  
+  const existingIdempotent = await redis.get(`idempotent:${idempotencyKey}`);
+  if (existingIdempotent) {
+    const existingData = JSON.parse(existingIdempotent as string);
+    console.log(`[PAYOUT] Duplicate request blocked for ${idempotencyKey}`);
+    return res.status(200).json({ 
+      success: true, 
+      paymentId: existingData.paymentId,
+      network: existingData.network,
+      duplicate: true,
+      message: "This payout was already processed"
+    });
+  }
   
   const existingPayout = await redis.get(`payout_pending:${uid}`);
   if (existingPayout) {
@@ -141,6 +155,7 @@ async function handlePayout(body: any, res: VercelResponse) {
             type: "app_to_user_payout",
             network: PI_NETWORK,
             idempotencyKey,
+            eventId: eventId || 'reputa_reward',
             timestamp: new Date().toISOString()
           },
           uid: uid
@@ -161,13 +176,22 @@ async function handlePayout(body: any, res: VercelResponse) {
     }
 
     if (data.identifier) {
-      await redis.set(`payout_pending:${uid}`, data.identifier, { ex: 3600 });
+      await redis.set(`payout_pending:${uid}`, data.identifier, { ex: 7200 });
+      
+      await redis.set(`idempotent:${idempotencyKey}`, JSON.stringify({
+        paymentId: data.identifier,
+        network: PI_NETWORK,
+        amount: payoutAmount,
+        createdAt: new Date().toISOString()
+      }), { ex: 86400 * 7 });
+      
       await redis.set(`payout_history:${data.identifier}`, JSON.stringify({
         uid,
         address,
         amount: payoutAmount,
         status: 'pending',
         network: PI_NETWORK,
+        idempotencyKey,
         createdAt: new Date().toISOString()
       }), { ex: 86400 * 30 });
     }

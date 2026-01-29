@@ -168,7 +168,11 @@ function ReputaAppContent() {
 
       if (response.ok && result.success) {
         const networkLabel = result.network === 'mainnet' ? 'Mainnet' : 'Testnet';
-        alert(`✅ Payout Initiated on ${networkLabel}!\nPayment ID: ${result.paymentId}\nCheck your wallet shortly.`);
+        if (result.duplicate) {
+          alert(`ℹ️ This payout was already processed.\nPayment ID: ${result.paymentId}`);
+        } else {
+          alert(`✅ Payout Initiated on ${networkLabel}!\nPayment ID: ${result.paymentId}\nCheck your wallet shortly.`);
+        }
         setManualWallet('');
       } else if (response.status === 409) {
         alert("⚠️ A payout is already in progress. Please wait or clear the pending payment.");

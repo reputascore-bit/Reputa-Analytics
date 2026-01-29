@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Info, X, Zap, Gift, Activity, TrendingUp, Award, ArrowRight, Star } from 'lucide-react';
+import { Info, X, Zap, Gift, Activity, TrendingUp, Award, ArrowRight, Star, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { 
   getLevelProgress, 
@@ -74,7 +74,6 @@ export function PointsExplainer({
   const levelProgress = getLevelProgress(currentPoints);
   const currentLevelColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel];
   
-  const currentLevelData = LEVELS.find(l => l.name === levelProgress.currentLevel) || LEVELS[1];
   const nextLevelData = levelProgress.nextLevel ? LEVELS.find(l => l.name === levelProgress.nextLevel) : null;
 
   return (
@@ -82,85 +81,82 @@ export function PointsExplainer({
       <button
         onClick={() => setIsOpen(true)}
         aria-label="Learn how points are calculated"
-        className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+        className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+        style={{
+          background: currentLevelColors.bg,
+          border: `1px solid ${currentLevelColors.border}`,
+        }}
       >
-        <Info className="w-4 h-4" />
-        <span className="text-xs font-bold">How Points Work</span>
+        <Info className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+        <span className="text-xs font-bold" style={{ color: currentLevelColors.text }}>How Points Work</span>
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0B0F' }}>
           <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
-          />
-          
-          <div 
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl"
-            style={{
-              background: 'linear-gradient(180deg, #0F1117 0%, #0A0B0F 100%)',
-              border: `1px solid ${currentLevelColors.border}`,
-              boxShadow: `0 0 60px ${currentLevelColors.bg}`,
+            className="flex-shrink-0 px-4 py-3 flex items-center gap-3 border-b"
+            style={{ 
+              background: 'rgba(15, 17, 23, 0.98)',
+              borderColor: 'rgba(255, 255, 255, 0.08)',
             }}
           >
-            <div className="sticky top-0 z-10 p-6 border-b border-white/10" style={{ background: '#0F1117' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: currentLevelColors.bg,
-                      border: `1px solid ${currentLevelColors.border}`,
-                    }}
-                  >
-                    <Zap className="w-5 h-5" style={{ color: currentLevelColors.text }} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black uppercase text-white">Points System</h2>
-                    <p className="text-xs text-gray-500">Synchronized with Atomic Scoring Protocol</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  aria-label="Close"
-                  className="p-2 rounded-lg hover:bg-white/10 transition-all"
-                >
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-6">
+            <button
+              onClick={() => setIsOpen(false)}
+              aria-label="Go back"
+              className="p-2 -ml-2 rounded-lg hover:bg-white/5 transition-all"
+            >
+              <ChevronLeft className="w-5 h-5 text-white/70" />
+            </button>
+            <div className="flex items-center gap-2">
               <div 
-                className="p-5 rounded-xl"
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={{
                   background: currentLevelColors.bg,
                   border: `1px solid ${currentLevelColors.border}`,
                 }}
               >
-                <div className="flex items-center justify-between mb-4">
+                <Zap className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-white">Points System</h1>
+                <p className="text-[10px] text-white/40">Atomic Scoring Protocol</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 space-y-4 pb-8">
+              <div 
+                className="p-4 rounded-xl"
+                style={{
+                  background: 'rgba(20, 22, 30, 0.8)',
+                  border: `1px solid ${currentLevelColors.border}`,
+                  boxShadow: `0 0 30px ${currentLevelColors.bg}`,
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Current Level</p>
-                    <p className="text-2xl font-black" style={{ color: currentLevelColors.text }}>
+                    <p className="text-[10px] text-white/50 uppercase tracking-wider mb-1">Current Level</p>
+                    <p className="text-xl font-black" style={{ color: currentLevelColors.text }}>
                       {levelProgress.currentLevel}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500 mb-1">Total Points</p>
+                    <p className="text-[10px] text-white/50 uppercase tracking-wider mb-1">Total Points</p>
                     <p className="text-2xl font-black text-white">{levelProgress.displayScore.toLocaleString()}</p>
                   </div>
                 </div>
                 
                 {levelProgress.nextLevel && nextLevelData && (
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
+                  <div className="pt-3 border-t border-white/5">
+                    <div className="flex items-center justify-between text-[10px] text-white/50 mb-2">
                       <span>{levelProgress.currentLevel}</span>
                       <span className="flex items-center gap-1">
                         <ArrowRight className="w-3 h-3" />
                         {levelProgress.nextLevel} ({nextLevelData.minPoints.toLocaleString()} pts)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-2 rounded-full bg-white/5 overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all duration-500"
                         style={{ 
@@ -169,71 +165,75 @@ export function PointsExplainer({
                         }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
+                    <p className="text-[10px] text-white/40 mt-2 text-center">
                       {levelProgress.pointsToNextLevel.toLocaleString()} points to {levelProgress.nextLevel}
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                  <p className="text-[10px] font-bold uppercase text-emerald-400 mb-1">Check-ins</p>
-                  <p className="text-lg font-black text-white">{checkInPoints}</p>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="p-2.5 rounded-xl text-center" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <p className="text-[8px] font-bold uppercase text-emerald-400 mb-0.5">Check-ins</p>
+                  <p className="text-base font-black text-white">{checkInPoints}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
-                  <p className="text-[10px] font-bold uppercase text-cyan-400 mb-1">Transactions</p>
-                  <p className="text-lg font-black text-white">{transactionPoints}</p>
+                <div className="p-2.5 rounded-xl text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <p className="text-[8px] font-bold uppercase text-cyan-400 mb-0.5">Transactions</p>
+                  <p className="text-base font-black text-white">{transactionPoints}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
-                  <p className="text-[10px] font-bold uppercase text-purple-400 mb-1">Activity</p>
-                  <p className="text-lg font-black text-white">{activityPoints}</p>
+                <div className="p-2.5 rounded-xl text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  <p className="text-[8px] font-bold uppercase text-purple-400 mb-0.5">Activity</p>
+                  <p className="text-base font-black text-white">{activityPoints}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                  <p className="text-[10px] font-bold uppercase text-amber-400 mb-1">Streak</p>
-                  <p className="text-lg font-black text-white">{streakBonus}</p>
+                <div className="p-2.5 rounded-xl text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <p className="text-[8px] font-bold uppercase text-amber-400 mb-0.5">Streak</p>
+                  <p className="text-base font-black text-white">{streakBonus}</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase text-white">How to Earn Points</h3>
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase text-white/80 tracking-wider">How to Earn Points</h3>
                 
                 {POINTS_BREAKDOWN.map((category, idx) => {
                   const Icon = category.icon;
-                  const colorMap: Record<string, string> = {
-                    emerald: 'rgba(16, 185, 129',
-                    cyan: 'rgba(0, 217, 255',
-                    purple: 'rgba(139, 92, 246',
+                  const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+                    emerald: { bg: 'rgba(16, 185, 129, 0.1)', text: '#10B981', border: 'rgba(16, 185, 129, 0.25)' },
+                    cyan: { bg: 'rgba(0, 217, 255, 0.1)', text: '#00D9FF', border: 'rgba(0, 217, 255, 0.25)' },
+                    purple: { bg: 'rgba(139, 92, 246, 0.1)', text: '#8B5CF6', border: 'rgba(139, 92, 246, 0.25)' },
                   };
-                  const color = colorMap[category.color] || colorMap.cyan;
+                  const colors = colorMap[category.color] || colorMap.cyan;
                   
                   return (
                     <div 
                       key={idx}
-                      className="p-4 rounded-xl"
+                      className="p-3 rounded-xl"
                       style={{
-                        background: `${color}, 0.05)`,
-                        border: `1px solid ${color}, 0.2)`,
+                        background: colors.bg,
+                        border: `1px solid ${colors.border}`,
                       }}
                     >
-                      <div className="flex items-center gap-2 mb-3">
-                        <Icon className="w-4 h-4" style={{ color: `${color}, 1)` }} />
-                        <span className="text-sm font-bold" style={{ color: `${color}, 1)` }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon className="w-4 h-4" style={{ color: colors.text }} />
+                        <span className="text-xs font-bold" style={{ color: colors.text }}>
                           {category.category}
                         </span>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {category.items.map((item, itemIdx) => (
                           <div key={itemIdx} className="flex items-center justify-between">
-                            <div>
-                              <span className="text-sm text-white">{item.action}</span>
-                              <span className="text-xs text-gray-500 ml-2">({item.description})</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs text-white font-medium">{item.action}</span>
+                              <span className="text-[10px] text-white/40 ml-1">({item.description})</span>
                             </div>
-                            <span className="px-2 py-1 rounded-full text-xs font-bold" style={{ 
-                              background: `${color}, 0.2)`,
-                              color: `${color}, 1)`,
-                            }}>
-                              +{item.points} pts
+                            <span 
+                              className="flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ml-2" 
+                              style={{ 
+                                background: colors.bg,
+                                color: colors.text,
+                                border: `1px solid ${colors.border}`,
+                              }}
+                            >
+                              +{item.points}
                             </span>
                           </div>
                         ))}
@@ -243,13 +243,13 @@ export function PointsExplainer({
                 })}
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase text-white/80 tracking-wider flex items-center gap-2">
                   <Award className="w-4 h-4" style={{ color: currentLevelColors.text }} />
-                  Level Benefits (Max: {SCORE_CAP.toLocaleString()} pts)
+                  Trust Levels (Max: {SCORE_CAP.toLocaleString()} pts)
                 </h3>
                 
-                <div className="grid gap-2">
+                <div className="space-y-1.5">
                   {LEVELS.filter(l => l.minPoints > -Infinity).map((level, idx) => {
                     const levelColors = TRUST_LEVEL_COLORS[level.name];
                     const isCurrentLevel = level.name === levelProgress.currentLevel;
@@ -257,28 +257,38 @@ export function PointsExplainer({
                     return (
                       <div 
                         key={idx}
-                        className={`p-3 rounded-xl flex items-center justify-between ${
-                          isCurrentLevel ? '' : 'opacity-60'
-                        }`}
+                        className="px-3 py-2.5 rounded-xl flex items-center justify-between"
                         style={{
-                          background: levelColors.bg,
-                          border: `1px solid ${levelColors.border}`,
-                          boxShadow: isCurrentLevel ? `0 0 0 2px ${levelColors.text}` : 'none',
+                          background: isCurrentLevel ? levelColors.bg : 'rgba(255, 255, 255, 0.02)',
+                          border: `1px solid ${isCurrentLevel ? levelColors.border : 'rgba(255, 255, 255, 0.05)'}`,
+                          boxShadow: isCurrentLevel ? `0 0 15px ${levelColors.bg}` : 'none',
                         }}
                       >
-                        <div className="flex items-center gap-3">
-                          <Star className="w-4 h-4" style={{ color: levelColors.text }} />
+                        <div className="flex items-center gap-2">
+                          <Star 
+                            className="w-3.5 h-3.5" 
+                            style={{ color: isCurrentLevel ? levelColors.text : 'rgba(255, 255, 255, 0.3)' }} 
+                          />
                           <div>
-                            <span className="font-bold text-white">{level.name}</span>
-                            <span className="text-xs text-gray-500 ml-2">
-                              ({level.minPoints.toLocaleString()}{level.maxPoints === Infinity ? '+' : `-${level.maxPoints.toLocaleString()}`} pts)
+                            <span 
+                              className="text-xs font-bold"
+                              style={{ color: isCurrentLevel ? levelColors.text : 'rgba(255, 255, 255, 0.6)' }}
+                            >
+                              {level.name}
+                            </span>
+                            <span className="text-[9px] text-white/30 ml-1.5">
+                              ({level.minPoints.toLocaleString()}{level.maxPoints === Infinity ? '+' : `-${level.maxPoints.toLocaleString()}`})
                             </span>
                           </div>
                         </div>
                         {isCurrentLevel && (
                           <span 
-                            className="px-2 py-1 rounded-full text-[10px] font-bold"
-                            style={{ background: levelColors.bg, color: levelColors.text, border: `1px solid ${levelColors.border}` }}
+                            className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase"
+                            style={{ 
+                              background: levelColors.bg, 
+                              color: levelColors.text, 
+                              border: `1px solid ${levelColors.border}` 
+                            }}
                           >
                             Current
                           </span>

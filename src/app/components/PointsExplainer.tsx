@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import { Info, X, Zap, Gift, Activity, Clock, TrendingUp, Award, ArrowRight, Star } from 'lucide-react';
+import { Info, X, Zap, Gift, Activity, TrendingUp, Award, ArrowRight, Star } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
+import { 
+  getLevelProgress, 
+  getBackendScoreCap, 
+  TRUST_LEVEL_COLORS,
+  AtomicTrustLevel 
+} from '../protocol/atomicScoring';
 
 interface PointsExplainerProps {
   currentPoints: number;
@@ -9,6 +15,18 @@ interface PointsExplainerProps {
   activityPoints?: number;
   streakBonus?: number;
 }
+
+const SCORE_CAP = getBackendScoreCap();
+
+const LEVELS: { name: AtomicTrustLevel; minPoints: number; maxPoints: number }[] = [
+  { name: 'Very Low Trust', minPoints: -Infinity, maxPoints: 0 },
+  { name: 'Low Trust', minPoints: 0, maxPoints: Math.floor(SCORE_CAP * 0.10) },
+  { name: 'Medium', minPoints: Math.floor(SCORE_CAP * 0.10), maxPoints: Math.floor(SCORE_CAP * 0.25) },
+  { name: 'Active', minPoints: Math.floor(SCORE_CAP * 0.25), maxPoints: Math.floor(SCORE_CAP * 0.45) },
+  { name: 'Trusted', minPoints: Math.floor(SCORE_CAP * 0.45), maxPoints: Math.floor(SCORE_CAP * 0.65) },
+  { name: 'Pioneer+', minPoints: Math.floor(SCORE_CAP * 0.65), maxPoints: Math.floor(SCORE_CAP * 0.85) },
+  { name: 'Elite', minPoints: Math.floor(SCORE_CAP * 0.85), maxPoints: Infinity },
+];
 
 const POINTS_BREAKDOWN = [
   {
@@ -43,16 +61,6 @@ const POINTS_BREAKDOWN = [
   },
 ];
 
-const LEVELS = [
-  { name: 'Very Low Trust', minPoints: 0, maxPoints: 999, color: '#EF4444' },
-  { name: 'Low Trust', minPoints: 1000, maxPoints: 2499, color: '#F97316' },
-  { name: 'Medium', minPoints: 2500, maxPoints: 4499, color: '#EAB308' },
-  { name: 'Active', minPoints: 4500, maxPoints: 6499, color: '#10B981' },
-  { name: 'Trusted', minPoints: 6500, maxPoints: 8499, color: '#00D9FF' },
-  { name: 'Pioneer+', minPoints: 8500, maxPoints: 9999, color: '#8B5CF6' },
-  { name: 'Elite', minPoints: 10000, maxPoints: Infinity, color: '#F59E0B' },
-];
-
 export function PointsExplainer({ 
   currentPoints, 
   checkInPoints = 0, 
@@ -63,11 +71,11 @@ export function PointsExplainer({
   const [isOpen, setIsOpen] = useState(false);
   const { t } = useLanguage();
 
-  const currentLevel = LEVELS.find(l => currentPoints >= l.minPoints && currentPoints <= l.maxPoints) || LEVELS[0];
-  const nextLevel = LEVELS.find(l => l.minPoints > currentPoints);
-  const progressToNext = nextLevel 
-    ? ((currentPoints - currentLevel.minPoints) / (nextLevel.minPoints - currentLevel.minPoints)) * 100
-    : 100;
+  const levelProgress = getLevelProgress(currentPoints);
+  const currentLevelColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel];
+  
+  const currentLevelData = LEVELS.find(l => l.name === levelProgress.currentLevel) || LEVELS[1];
+  const nextLevelData = levelProgress.nextLevel ? LEVELS.find(l => l.name === levelProgress.nextLevel) : null;
 
   return (
     <>
@@ -91,8 +99,8 @@ export function PointsExplainer({
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl"
             style={{
               background: 'linear-gradient(180deg, #0F1117 0%, #0A0B0F 100%)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              boxShadow: '0 0 60px rgba(245, 158, 11, 0.2)',
+              border: `1px solid ${currentLevelColors.border}`,
+              boxShadow: `0 0 60px ${currentLevelColors.bg}`,
             }}
           >
             <div className="sticky top-0 z-10 p-6 border-b border-white/10" style={{ background: '#0F1117' }}>
@@ -101,15 +109,15 @@ export function PointsExplainer({
                   <div 
                     className="w-10 h-10 rounded-xl flex items-center justify-center"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(251, 191, 36, 0.2) 100%)',
-                      border: '1px solid rgba(245, 158, 11, 0.4)',
+                      background: currentLevelColors.bg,
+                      border: `1px solid ${currentLevelColors.border}`,
                     }}
                   >
-                    <Zap className="w-5 h-5 text-amber-400" />
+                    <Zap className="w-5 h-5" style={{ color: currentLevelColors.text }} />
                   </div>
                   <div>
                     <h2 className="text-lg font-black uppercase text-white">Points System</h2>
-                    <p className="text-xs text-gray-500">How to earn and level up</p>
+                    <p className="text-xs text-gray-500">Synchronized with Atomic Scoring Protocol</p>
                   </div>
                 </div>
                 <button
@@ -126,43 +134,43 @@ export function PointsExplainer({
               <div 
                 className="p-5 rounded-xl"
                 style={{
-                  background: `linear-gradient(135deg, ${currentLevel.color}15 0%, ${currentLevel.color}05 100%)`,
-                  border: `1px solid ${currentLevel.color}40`,
+                  background: currentLevelColors.bg,
+                  border: `1px solid ${currentLevelColors.border}`,
                 }}
               >
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Current Level</p>
-                    <p className="text-2xl font-black" style={{ color: currentLevel.color }}>
-                      {currentLevel.name}
+                    <p className="text-2xl font-black" style={{ color: currentLevelColors.text }}>
+                      {levelProgress.currentLevel}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500 mb-1">Total Points</p>
-                    <p className="text-2xl font-black text-white">{currentPoints.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-white">{levelProgress.displayScore.toLocaleString()}</p>
                   </div>
                 </div>
                 
-                {nextLevel && (
+                {levelProgress.nextLevel && nextLevelData && (
                   <div>
                     <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                      <span>{currentLevel.name}</span>
+                      <span>{levelProgress.currentLevel}</span>
                       <span className="flex items-center gap-1">
                         <ArrowRight className="w-3 h-3" />
-                        {nextLevel.name} ({nextLevel.minPoints} pts)
+                        {levelProgress.nextLevel} ({nextLevelData.minPoints.toLocaleString()} pts)
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                       <div 
                         className="h-full rounded-full transition-all duration-500"
                         style={{ 
-                          width: `${Math.min(progressToNext, 100)}%`,
-                          background: `linear-gradient(90deg, ${currentLevel.color} 0%, ${nextLevel.color} 100%)`,
+                          width: `${Math.min(levelProgress.progressInLevel, 100)}%`,
+                          background: `linear-gradient(90deg, ${currentLevelColors.text} 0%, ${TRUST_LEVEL_COLORS[levelProgress.nextLevel].text} 100%)`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-2 text-center">
-                      {nextLevel.minPoints - currentPoints} points to {nextLevel.name}
+                      {levelProgress.pointsToNextLevel.toLocaleString()} points to {levelProgress.nextLevel}
                     </p>
                   </div>
                 )}
@@ -237,39 +245,47 @@ export function PointsExplainer({
 
               <div className="space-y-4">
                 <h3 className="text-sm font-black uppercase text-white flex items-center gap-2">
-                  <Award className="w-4 h-4 text-amber-400" />
-                  Level Benefits
+                  <Award className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+                  Level Benefits (Max: {SCORE_CAP.toLocaleString()} pts)
                 </h3>
                 
                 <div className="grid gap-2">
-                  {LEVELS.map((level, idx) => (
-                    <div 
-                      key={idx}
-                      className={`p-3 rounded-xl flex items-center justify-between ${
-                        level.name === currentLevel.name ? '' : 'opacity-60'
-                      }`}
-                      style={{
-                        background: `${level.color}10`,
-                        border: `1px solid ${level.color}30`,
-                        boxShadow: level.name === currentLevel.name ? `0 0 0 2px ${level.color}` : 'none',
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Star className="w-4 h-4" style={{ color: level.color }} />
-                        <div>
-                          <span className="font-bold text-white">{level.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">
-                            ({level.minPoints}{level.maxPoints === Infinity ? '+' : `-${level.maxPoints}`} pts)
-                          </span>
+                  {LEVELS.filter(l => l.minPoints > -Infinity).map((level, idx) => {
+                    const levelColors = TRUST_LEVEL_COLORS[level.name];
+                    const isCurrentLevel = level.name === levelProgress.currentLevel;
+                    
+                    return (
+                      <div 
+                        key={idx}
+                        className={`p-3 rounded-xl flex items-center justify-between ${
+                          isCurrentLevel ? '' : 'opacity-60'
+                        }`}
+                        style={{
+                          background: levelColors.bg,
+                          border: `1px solid ${levelColors.border}`,
+                          boxShadow: isCurrentLevel ? `0 0 0 2px ${levelColors.text}` : 'none',
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Star className="w-4 h-4" style={{ color: levelColors.text }} />
+                          <div>
+                            <span className="font-bold text-white">{level.name}</span>
+                            <span className="text-xs text-gray-500 ml-2">
+                              ({level.minPoints.toLocaleString()}{level.maxPoints === Infinity ? '+' : `-${level.maxPoints.toLocaleString()}`} pts)
+                            </span>
+                          </div>
                         </div>
+                        {isCurrentLevel && (
+                          <span 
+                            className="px-2 py-1 rounded-full text-[10px] font-bold"
+                            style={{ background: levelColors.bg, color: levelColors.text, border: `1px solid ${levelColors.border}` }}
+                          >
+                            Current
+                          </span>
+                        )}
                       </div>
-                      {level.name === currentLevel.name && (
-                        <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-white/10 text-white">
-                          Current
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -11,14 +11,17 @@ I prefer iterative development with a focus on delivering functional, tested com
   - `api/auth.ts` - Authentication endpoints
   - `api/payments.ts` - All payment operations (approve, complete, payout, send)
   - `api/wallet.ts` - Wallet data retrieval
-  - `api/user.ts` - User data, VIP check, reputation storage, point merging
+  - `api/user.ts` - User data, VIP check, reputation storage, wallet state, point merging
   - `api/admin.ts` - Admin dashboard
   - `api/top100.ts` - Top 100 wallets with pagination and snapshots
-- **Unified Reputation Service:** Created `src/app/services/reputationService.ts` as the single point of contact for all reputation operations
-- **Separate Check-in Points:** Daily check-in now stores points separately from main reputation score
+- **Real Blockchain Data Integration:** Created `src/app/services/walletDataService.ts` to fetch authentic Pi Network blockchain data (testnet/mainnet)
+- **Wallet Snapshot Comparison:** Compares previous vs current wallet state to detect new transactions, contacts, and activity changes
+- **Automatic Pi SDK Sync:** Pi Browser login now automatically syncs blockchain data and calculates reputation from real wallet activity
+- **Unified Reputation Service:** `src/app/services/reputationService.ts` now integrates blockchain scores with check-in points
+- **Separate Check-in Points:** Daily check-in stores points separately from blockchain-derived reputation
 - **Weekly Manual Merge:** Users can manually merge their check-in points to reputation (weekly merge feature)
-- **Persistent Storage:** User reputation state stored in Redis via API with localStorage fallback
-- **Pi SDK Integration:** Updated to automatically load user reputation on Pi Browser login
+- **Persistent Storage:** User reputation state, wallet snapshots, and blockchain events stored in Redis via API
+- **ReputationEvolution Component:** New UI component displaying blockchain reputation, activity history, and wallet stats
 
 ## System Architecture
 The application is built with React 18, TypeScript, Vite 6, and Tailwind CSS 4.1. It adopts a mobile-first design philosophy, specifically targeting the Pi Network Browser, with responsive layouts for desktop.
@@ -36,15 +39,25 @@ api/
 
 ### Reputation System Architecture
 1. **atomicScoring.ts** - The single source of truth for reputation calculation logic
-2. **reputationService.ts** - Service layer connecting frontend to backend API
-3. **DailyCheckIn.tsx** - UI component for daily check-ins with separate point storage
-4. **User API** - Backend endpoints for persistent storage (Redis/Upstash)
+2. **walletDataService.ts** - Fetches real blockchain data from Pi Network API (testnet/mainnet)
+3. **reputationService.ts** - Service layer integrating blockchain scores with check-in points
+4. **DailyCheckIn.tsx** - UI component for daily check-ins with separate point storage
+5. **ReputationEvolution.tsx** - UI component displaying blockchain reputation and activity history
+6. **User API** - Backend endpoints for persistent storage (Redis/Upstash)
+
+**Blockchain Data Flow:**
+1. User logs in via Pi SDK → `loginWithPiAndLoadReputation()`
+2. Wallet address retrieved → `walletDataService.createWalletSnapshot()`
+3. Snapshot compared to previous state → New events detected
+4. Reputation calculated from real blockchain activity → `calculateAtomicReputation()`
+5. State saved to Redis → User sees real-time blockchain reputation
 
 **Points Flow:**
+- Blockchain activity (transactions, wallet age, contacts) → Adds to `blockchainScore`
 - Daily check-in → Adds to `dailyCheckInPoints` (separate pool)
 - Ad bonus → Adds to `dailyCheckInPoints` (separate pool)
-- Weekly merge → User manually transfers `dailyCheckInPoints` to `reputationScore`
-- External activities → Added directly to `reputationScore` via atomicScoring
+- Weekly merge → User manually transfers `dailyCheckInPoints` to total
+- Total reputation = `blockchainScore` + merged `dailyCheckInPoints`
 
 **UI/UX Decisions:**
 - **Theme:** Dark, futuristic dashboard with a strong emphasis on glassmorphism and neon glow effects.

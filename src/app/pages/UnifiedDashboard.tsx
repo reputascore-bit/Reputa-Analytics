@@ -154,18 +154,24 @@ export function UnifiedDashboard({
   }, [period]);
 
   const atomicResult = useMemo(() => {
+    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
     const demoData = generateDemoActivityData();
     demoData.accountAgeDays = walletData.accountAge || 180;
     demoData.internalTxCount = walletData.transactions?.length || 25;
-    demoData.dailyCheckins = 0;
-    demoData.adBonuses = 0;
-    return calculateAtomicReputation(demoData);
-  }, [walletData.accountAge, walletData.transactions?.length]);
+    demoData.dailyCheckins = Math.floor(userPoints.checkIn / 10);
+    demoData.adBonuses = Math.floor(userPoints.activity / 5);
+    const result = calculateAtomicReputation(demoData);
+    result.interaction.dailyCheckins = Math.floor(userPoints.checkIn / 10);
+    result.interaction.adBonuses = Math.floor(userPoints.activity / 5);
+    result.interaction.totalPoints += earnedPoints;
+    result.adjustedScore += earnedPoints;
+    result.rawScore += earnedPoints;
+    return result;
+  }, [walletData.accountAge, walletData.transactions?.length, userPoints.checkIn, userPoints.activity, userPoints.streak]);
 
   const levelProgress = useMemo(() => {
-    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
-    return getLevelProgress(atomicResult.adjustedScore + earnedPoints);
-  }, [atomicResult.adjustedScore, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -241,204 +247,121 @@ export function UnifiedDashboard({
       </div>
 
       <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content">
-        {/* Top Header Bar */}
-        <div className="flex items-center justify-between mb-4 sm:mb-6 mobile-header">
-          <div className="flex items-center gap-2 sm:gap-4">
+        {/* Minimal Section Header */}
+        <div className="flex items-center justify-between mb-4 sm:mb-5 mobile-header">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={onReset}
-              className="p-2 sm:p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-purple-500/40 group touch-target"
-              style={{ border: '1px solid rgba(139, 92, 246, 0.3)' }}
+              className="p-2 rounded-lg transition-all active:scale-95 hover:bg-white/5 touch-target"
             >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 group-hover:text-purple-300" />
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
             </button>
-            <div>
-              <h1 className="text-base sm:text-xl font-black uppercase tracking-wide neon-text-purple">{t('dashboard.title')}</h1>
-              {username && (
-                <p className="text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>{username}</p>
-              )}
-            </div>
+            <h1 className="text-sm sm:text-lg font-bold uppercase tracking-wider text-white/90">
+              {activeSection === 'overview' ? 'Reputa Score' : 
+               activeSection === 'analytics' ? 'Analytics' :
+               activeSection === 'transactions' ? 'Activity' :
+               activeSection === 'audit' ? 'Audit Report' :
+               activeSection === 'portfolio' ? 'Portfolio' :
+               activeSection === 'wallet' ? 'Wallet' :
+               activeSection === 'network' ? 'Network' :
+               activeSection === 'profile' ? 'Profile' :
+               activeSection === 'settings' ? 'Settings' :
+               activeSection}
+            </h1>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-3">
-            <Button 
-              onClick={onUpgradePrompt} 
-              className="gap-1 sm:gap-2 bg-gradient-to-r from-purple-600 via-purple-700 to-cyan-600 text-white font-bold text-[10px] sm:text-xs uppercase shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all border border-purple-400/30 px-2 sm:px-3 py-1.5 sm:py-2"
-            >
-              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">{isProUser ? 'Pro Active' : 'Upgrade'}</span>
-              <span className="sm:hidden">{isProUser ? 'Pro' : 'VIP'}</span>
-            </Button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {!isProUser && (
+              <Button 
+                onClick={onUpgradePrompt} 
+                className="bg-gradient-to-r from-purple-600 to-purple-700 text-white font-semibold text-[10px] sm:text-xs uppercase px-2 sm:px-3 py-1.5 hover:opacity-90 transition-opacity"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                <span className="hidden sm:inline">Pro</span>
+              </Button>
+            )}
             
             <button
               onClick={() => window.location.reload()}
-              className="p-2 sm:p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-cyan-500/40 touch-target"
-              style={{ border: '1px solid rgba(0, 217, 255, 0.3)' }}
-              title="Refresh Data"
+              className="p-2 rounded-lg transition-all active:scale-95 hover:bg-white/5 touch-target"
+              title="Refresh"
             >
-              <RefreshCw className="w-4 h-4 text-cyan-400" />
+              <RefreshCw className="w-4 h-4 text-purple-400" />
             </button>
-
-            <div className="relative group hidden sm:block">
-              <button
-                className="flex items-center gap-2 glass-card px-4 py-2.5 hover:border-cyan-500/40 transition-all"
-                style={{ border: '1px solid rgba(0, 217, 255, 0.3)' }}
-              >
-                <Languages className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs font-bold text-white uppercase">{language}</span>
-                <ChevronDown className="w-3 h-3 text-cyan-400" />
-              </button>
-              
-              <div 
-                className="absolute right-0 top-full mt-2 py-2 rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 min-w-[120px] z-50"
-                style={{
-                  background: 'rgba(15, 17, 23, 0.98)',
-                  border: '1px solid rgba(0, 217, 255, 0.3)',
-                  backdropFilter: 'blur(20px)',
-                  boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
-                }}
-              >
-                {languages.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => changeLanguage(lang.code)}
-                    className={`w-full px-4 py-2.5 text-left text-xs font-bold uppercase tracking-wide transition-all flex items-center gap-3 ${
-                      language === lang.code
-                        ? 'text-cyan-400 bg-cyan-500/10'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {language === lang.code && <CheckCircle className="w-3 h-3" />}
-                    <span className={language === lang.code ? '' : 'ml-6'}>{t(`language.${lang.code}`)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Pioneer Profile Card with Level Progress */}
+        {/* Compact Profile Card */}
         <div 
-          className="glass-card p-5 mb-6" 
+          className="rounded-2xl p-4 mb-5" 
           style={{ 
-            border: `1px solid ${trustColors.border}`,
-            boxShadow: `0 0 30px ${trustColors.bg}`,
+            background: 'rgba(20, 22, 30, 0.8)',
+            border: '1px solid rgba(139, 92, 246, 0.2)',
           }}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
               <div 
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
                 style={{
-                  background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.2) 100%)`,
-                  border: `2px solid ${trustColors.border}`,
-                  boxShadow: `0 0 25px ${trustColors.bg}`,
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
                 }}
               >
-                <User className="w-7 h-7" style={{ color: trustColors.text }} />
+                <User className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-black uppercase tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
-                    {username || 'Pioneer'}
-                  </h2>
-                  <span 
-                    className="px-2 py-0.5 rounded text-[9px] font-black uppercase"
-                    style={{ 
-                      background: trustColors.bg, 
-                      border: `1px solid ${trustColors.border}`,
-                      color: trustColors.text,
-                    }}
-                  >
+                <h2 className="text-sm font-bold text-white/95">{username || 'Pioneer'}</h2>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[11px] text-purple-400/80">{formatAddress(walletData.address)}</span>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
                     Lv.{levelProgress.levelIndex + 1}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Wallet className="w-3 h-3 text-cyan-400" />
-                  <span className="font-mono text-sm" style={{ color: 'rgba(0, 217, 255, 0.9)' }}>
-                    {formatAddress(walletData.address)}
-                  </span>
-                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="text-center px-4 py-3 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
-                <div className="flex items-center gap-1.5 justify-center mb-1">
-                  <TrendingUp className="w-3.5 h-3.5" style={{ color: trustColors.text }} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: trustColors.text }}>Reputa</span>
-                </div>
-                <p className="text-2xl font-black" style={{ color: trustColors.text }}>{levelProgress.displayScore.toLocaleString()}</p>
-              </div>
-
-              <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
-                <div className="flex items-center gap-1.5 justify-center mb-1">
-                  <Coins className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">{t('dashboard.balance')}</span>
-                </div>
-                <p className="text-2xl font-black neon-text-cyan">
-                  {(walletData?.balance || 0).toFixed(2)} <span className="text-cyan-400 text-sm">π</span>
-                </p>
-              </div>
-
-              <div className="text-center px-4 py-3 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex items-center gap-1.5 justify-center mb-1">
-                  <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Age</span>
-                </div>
-                <p className="text-2xl font-black text-emerald-400">{walletData?.accountAge || 0} <span className="text-gray-500 text-sm">days</span></p>
-              </div>
-
-              <div 
-                className="text-center px-4 py-3 rounded-xl"
-                style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider block mb-1" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>Level</span>
-                <p className="text-lg font-black uppercase" style={{ color: trustColors.text }}>{levelProgress.currentLevel}</p>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-xl font-bold text-purple-400">{levelProgress.displayScore.toLocaleString()}</p>
+                <p className="text-[9px] uppercase text-white/50 font-medium">Reputa Score</p>
               </div>
             </div>
           </div>
 
-          {/* Level Progress Bar */}
-          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
-                Level {levelProgress.levelIndex + 1}/7
-              </span>
+          {/* Minimal Progress Bar */}
+          <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-medium text-purple-400/80">{levelProgress.currentLevel}</span>
               {levelProgress.nextLevel && (
-                <span className="text-[10px] font-medium" style={{ color: trustColors.text }}>
-                  {levelProgress.pointsToNextLevel.toLocaleString()} pts to {levelProgress.nextLevel}
-                </span>
+                <span className="text-[9px] text-white/40">{levelProgress.pointsToNextLevel.toLocaleString()} to next</span>
               )}
             </div>
-            <div className="relative">
-              <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
-                <div 
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ 
-                    width: `${levelProgress.progressInLevel}%`,
-                    background: `linear-gradient(90deg, ${trustColors.text} 0%, ${trustColors.border} 100%)`,
-                    boxShadow: `0 0 10px ${trustColors.text}`,
-                  }}
-                />
-              </div>
+            <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/5">
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${levelProgress.progressInLevel}%`,
+                  background: 'linear-gradient(90deg, #8B5CF6 0%, #00D9FF 100%)',
+                }}
+              />
             </div>
           </div>
         </div>
 
-        {/* Section Navigation Tabs */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+        {/* Section Navigation - Hidden on mobile (using bottom nav) */}
+        <div className="hidden sm:flex items-center gap-2 mb-5 overflow-x-auto pb-1">
           {sectionButtons.map((section) => (
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-all whitespace-nowrap ${
                 activeSection === section.id
-                  ? 'bg-gradient-to-r from-purple-500/30 to-cyan-500/30 text-white border border-purple-500/50'
-                  : 'glass-card text-gray-400 hover:text-white hover:border-purple-500/30'
+                  ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  : 'text-white/40 hover:text-white/70 hover:bg-white/5'
               }`}
-              style={activeSection !== section.id ? { border: '1px solid rgba(255, 255, 255, 0.1)' } : {}}
             >
-              <section.icon className={`w-4 h-4 ${activeSection === section.id ? 'text-purple-400' : ''}`} />
+              <section.icon className={`w-3.5 h-3.5 ${activeSection === section.id ? 'text-purple-400' : ''}`} />
               {section.label}
             </button>
           ))}

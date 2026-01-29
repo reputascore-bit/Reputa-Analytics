@@ -1,23 +1,49 @@
 :root {
+  /* Web3 Minimal Color Palette */
   --bg-primary: #0A0B0F;
   --bg-secondary: #0F1117;
-  --bg-card: rgba(30, 33, 40, 0.6);
-  --bg-card-solid: #1E2128;
-  --bg-elevated: #252932;
+  --bg-card: rgba(20, 22, 30, 0.7);
+  --bg-card-solid: #14161E;
+  --bg-elevated: #1A1D26;
+  
+  /* Text Colors */
   --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(160, 164, 184, 0.8);
-  --text-muted: rgba(120, 125, 150, 0.6);
-  --accent-cyan: #00D9FF;
-  --accent-purple: #8B5CF6;
-  --accent-pink: #EC4899;
-  --accent-green: #10B981;
-  --accent-orange: #F59E0B;
-  --accent-red: #EF4444;
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-glow: rgba(139, 92, 246, 0.3);
-  --glow-cyan: 0 0 40px rgba(0, 217, 255, 0.3);
-  --glow-purple: 0 0 40px rgba(139, 92, 246, 0.3);
-  --glow-pink: 0 0 40px rgba(236, 72, 153, 0.3);
+  --text-secondary: rgba(180, 185, 200, 0.75);
+  --text-muted: rgba(120, 125, 140, 0.5);
+  
+  /* Primary Accent - Purple (main brand) */
+  --accent-primary: #8B5CF6;
+  --accent-primary-light: #A78BFA;
+  --accent-primary-dark: #7C3AED;
+  
+  /* Secondary Accent - Cyan (highlights) */
+  --accent-secondary: #00D9FF;
+  --accent-secondary-light: #67E8F9;
+  --accent-secondary-dark: #0891B2;
+  
+  /* Status Colors (minimal) */
+  --status-success: #10B981;
+  --status-warning: #F59E0B;
+  --status-error: #EF4444;
+  
+  /* Legacy aliases for compatibility */
+  --accent-cyan: var(--accent-secondary);
+  --accent-purple: var(--accent-primary);
+  --accent-pink: var(--accent-primary-light);
+  --accent-green: var(--status-success);
+  --accent-orange: var(--status-warning);
+  --accent-red: var(--status-error);
+  
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-glow: rgba(139, 92, 246, 0.25);
+  
+  /* Glows */
+  --glow-primary: 0 0 30px rgba(139, 92, 246, 0.25);
+  --glow-secondary: 0 0 30px rgba(0, 217, 255, 0.2);
+  --glow-cyan: var(--glow-secondary);
+  --glow-purple: var(--glow-primary);
+  --glow-pink: var(--glow-primary);
 }
 
 .futuristic-bg {
@@ -35,9 +61,8 @@
   width: 200%;
   height: 200%;
   background: 
-    radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 80%, rgba(0, 217, 255, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, rgba(236, 72, 153, 0.04) 0%, transparent 60%);
+    radial-gradient(ellipse at 20% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(0, 217, 255, 0.04) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -92,10 +117,10 @@
   content: '';
   position: absolute;
   inset: -1px;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple), var(--accent-pink));
+  background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
   border-radius: inherit;
   z-index: -1;
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 .futuristic-input {
@@ -154,12 +179,12 @@
 }
 
 .animated-gradient-text {
-  background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple), var(--accent-pink), var(--accent-cyan));
-  background-size: 300% 100%;
+  background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary), var(--accent-secondary));
+  background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: gradient-shift 8s ease infinite;
+  animation: gradient-shift 6s ease infinite;
 }
 
 @keyframes gradient-shift {

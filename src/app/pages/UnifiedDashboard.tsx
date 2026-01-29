@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -120,7 +120,7 @@ export function UnifiedDashboard({
     };
   });
 
-  const handlePointsEarned = (points: number, type: 'checkin' | 'ad') => {
+  const handlePointsEarned = (points: number, type: 'checkin' | 'ad' | 'merge') => {
     setUserPoints((prev: typeof userPoints) => {
       const newState = {
         ...prev,
@@ -694,24 +694,24 @@ export function UnifiedDashboard({
                   
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Available Balance</p>
-                    <p className="text-2xl font-black neon-text-purple">{walletData.balance.toFixed(4)} <span className="text-purple-400">π</span></p>
+                    <p className="text-2xl font-black neon-text-purple">{(walletData.balance ?? 0).toFixed(4)} <span className="text-purple-400">π</span></p>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Account Age</p>
-                    <p className="text-xl font-black text-emerald-400">{walletData.accountAge} days</p>
+                    <p className="text-xl font-black text-emerald-400">{walletData.accountAge ?? 0} days</p>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Reputa Score</p>
-                    <p className="text-2xl font-black neon-text-purple">{walletData.reputaScore} <span className="text-gray-500 text-sm">/ 1000</span></p>
+                    <p className="text-2xl font-black neon-text-purple">{walletData.reputaScore ?? 0} <span className="text-gray-500 text-sm">/ 1000</span></p>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Total Transactions</p>
-                    <p className="text-xl font-black text-cyan-400">{walletData.totalTransactions || walletData.transactions.length}</p>
+                    <p className="text-xl font-black text-cyan-400">{walletData.totalTransactions || (walletData.transactions?.length ?? 0)}</p>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>

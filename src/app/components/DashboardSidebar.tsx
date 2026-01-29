@@ -1,5 +1,5 @@
 import { useLanguage } from '../hooks/useLanguage';
-import { AppMode } from '../protocol/types';
+import { AppMode, MODE_IMPACTS } from '../protocol/types';
 import { 
   LayoutDashboard, 
   LineChart, 
@@ -16,7 +16,8 @@ import {
   Shield,
   Wallet,
   User,
-  Globe
+  Globe,
+  Play
 } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
 
@@ -90,44 +91,35 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
         onClick={onModeToggle}
         className="mb-8 w-full rounded-xl p-4 transition-all active:scale-98"
         style={{
-          background: mode.mode === 'demo' 
-            ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(0, 217, 255, 0.1) 100%)'
-            : 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(0, 217, 255, 0.1) 100%)',
-          border: mode.mode === 'demo' 
-            ? '1px solid rgba(139, 92, 246, 0.3)'
-            : '1px solid rgba(16, 185, 129, 0.3)',
+          background: MODE_IMPACTS[mode.mode].bgColor,
+          border: `1px solid ${MODE_IMPACTS[mode.mode].borderColor}`,
         }}
       >
         <div className="flex items-center gap-3">
-          {mode.mode === 'demo' ? (
-            <>
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(139, 92, 246, 0.2)' }}
-              >
-                <TestTube className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-bold text-sm neon-text-purple">{t('app.mode.demo')}</p>
-                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>Click to switch</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(16, 185, 129, 0.2)' }}
-              >
-                <Zap className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-bold text-sm" style={{ color: '#10B981' }}>{t('app.mode.testnet')}</p>
-                <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>Connected</p>
-              </div>
-              {mode.connected && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: '0 0 10px #10B981' }} />
-              )}
-            </>
+          <div 
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: `${MODE_IMPACTS[mode.mode].color}20` }}
+          >
+            {mode.mode === 'mainnet' && <Globe className="w-5 h-5" style={{ color: MODE_IMPACTS[mode.mode].color }} />}
+            {mode.mode === 'testnet' && <TestTube className="w-5 h-5" style={{ color: MODE_IMPACTS[mode.mode].color }} />}
+            {mode.mode === 'demo' && <Play className="w-5 h-5" style={{ color: MODE_IMPACTS[mode.mode].color }} />}
+          </div>
+          <div className="text-left flex-1">
+            <p className="font-bold text-sm" style={{ color: MODE_IMPACTS[mode.mode].color }}>
+              {MODE_IMPACTS[mode.mode].label}
+            </p>
+            <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
+              {mode.mode === 'mainnet' ? '100% Impact' : mode.mode === 'testnet' ? '25% Impact' : 'No Impact'}
+            </p>
+          </div>
+          {mode.connected && (
+            <span 
+              className="w-2 h-2 rounded-full animate-pulse" 
+              style={{ 
+                backgroundColor: MODE_IMPACTS[mode.mode].color,
+                boxShadow: `0 0 10px ${MODE_IMPACTS[mode.mode].color}` 
+              }} 
+            />
           )}
         </div>
       </button>

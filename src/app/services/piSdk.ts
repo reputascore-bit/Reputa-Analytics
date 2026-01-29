@@ -129,24 +129,100 @@ function onIncompletePaymentFound(payment: any) {
   }
 }
 
-export async function loginWithPiAndLoadReputation(): Promise<{ user: PiUser | null; reputationLoaded: boolean }> {
+export interface LoginResult {
+  user: PiUser | null;
+  reputationLoaded: boolean;
+  blockchainSynced: boolean;
+  blockchainScore: number;
+  newEvents: number;
+}
+
+export async function loginWithPiAndLoadReputation(): Promise<LoginResult> {
   const user = await loginWithPi();
   
   if (user && user.uid !== 'demo') {
     try {
       const { reputationService } = await import('./reputationService');
-      await reputationService.loadUserReputation(user.uid);
+      
+      await reputationService.loadUserReputation(user.uid, user.wallet_address);
+      
       localStorage.setItem('piUserId', user.uid);
       localStorage.setItem('piUsername', user.username);
+      
+      let blockchainSynced = false;
+      let blockchainScore = 0;
+      let newEvents = 0;
+
       if (user.wallet_address) {
         localStorage.setItem('piWalletAddress', user.wallet_address);
+        
+        console.log('[PI SDK] Starting blockchain data sync for wallet:', user.wallet_address);
+        
+        const syncResult = await reputationService.syncBlockchainData(user.wallet_address);
+        
+        if (syncResult.success) {
+          blockchainSynced = true;
+          blockchainScore = syncResult.newScore;
+          newEvents = syncResult.newEvents.length;
+          
+          console.log('[PI SDK] Blockchain sync complete:', {
+            score: blockchainScore,
+            events: newEvents,
+            change: syncResult.scoreChange,
+          });
+        }
       }
-      return { user, reputationLoaded: true };
+
+      return { 
+        user, 
+        reputationLoaded: true,
+        blockchainSynced,
+        blockchainScore,
+        newEvents,
+      };
     } catch (error) {
       console.error('[PI SDK] Failed to load reputation:', error);
-      return { user, reputationLoaded: false };
+      return { 
+        user, 
+        reputationLoaded: false,
+        blockchainSynced: false,
+        blockchainScore: 0,
+        newEvents: 0,
+      };
     }
   }
   
-  return { user, reputationLoaded: false };
+  return { 
+    user, 
+    reputationLoaded: false,
+    blockchainSynced: false,
+    blockchainScore: 0,
+    newEvents: 0,
+  };
+}
+
+export async function refreshBlockchainData(): Promise<{
+  success: boolean;
+  score: number;
+  events: number;
+}> {
+  const walletAddress = localStorage.getItem('piWalletAddress');
+  if (!walletAddress) {
+    console.warn('[PI SDK] No wallet address found for refresh');
+    return { success: false, score: 0, events: 0 };
+  }
+
+  try {
+    const { reputationService } = await import('./reputationService');
+    const result = await reputationService.syncBlockchainData(walletAddress);
+    
+    return {
+      success: result.success,
+      score: result.newScore,
+      events: result.newEvents.length,
+    };
+  } catch (error) {
+    console.error('[PI SDK] Blockchain refresh failed:', error);
+    return { success: false, score: 0, events: 0 };
+  }
 }

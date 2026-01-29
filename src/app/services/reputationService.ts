@@ -1,6 +1,7 @@
 /**
  * Unified Reputation Service
  * Single source of truth for all reputation-related operations
+ * Integrates with WalletDataService for real blockchain data
  * Connects to the backend API for persistent storage
  */
 
@@ -11,10 +12,13 @@ import {
   AtomicTrustLevel,
   getLevelProgress
 } from '../protocol/atomicScoring';
+import { walletDataService, WalletSnapshot, ActivityEvent } from './walletDataService';
 
 export interface UserReputationState {
   uid: string;
+  walletAddress?: string;
   reputationScore: number;
+  blockchainScore: number;
   dailyCheckInPoints: number;
   totalCheckInDays: number;
   lastCheckIn: string | null;
@@ -23,7 +27,10 @@ export interface UserReputationState {
   adClaimedForCheckIn: string | null;
   lastCheckInId: string | null;
   interactionHistory: InteractionEvent[];
+  blockchainEvents: ActivityEvent[];
+  walletSnapshot?: WalletSnapshot;
   lastUpdated: string | null;
+  lastBlockchainSync: string | null;
   isNew?: boolean;
 }
 
@@ -58,7 +65,7 @@ export class ReputationService {
     return this.uid;
   }
 
-  async loadUserReputation(uid: string): Promise<UserReputationState> {
+  async loadUserReputation(uid: string, walletAddress?: string): Promise<UserReputationState> {
     this.uid = uid;
 
     try {
@@ -68,7 +75,9 @@ export class ReputationService {
       if (data.success && data.data) {
         this.currentState = {
           uid,
+          walletAddress: data.data.walletAddress || walletAddress,
           reputationScore: data.data.reputationScore || 0,
+          blockchainScore: data.data.blockchainScore || 0,
           dailyCheckInPoints: data.data.dailyCheckInPoints || 0,
           totalCheckInDays: data.data.totalCheckInDays || 0,
           lastCheckIn: data.data.lastCheckIn || null,
@@ -77,7 +86,10 @@ export class ReputationService {
           adClaimedForCheckIn: data.data.adClaimedForCheckIn || null,
           lastCheckInId: data.data.lastCheckInId || null,
           interactionHistory: data.data.interactionHistory || [],
+          blockchainEvents: data.data.blockchainEvents || [],
+          walletSnapshot: data.data.walletSnapshot || undefined,
           lastUpdated: data.data.lastUpdated || null,
+          lastBlockchainSync: data.data.lastBlockchainSync || null,
           isNew: data.data.isNew || false,
         };
         return this.currentState;
@@ -93,6 +105,9 @@ export class ReputationService {
     }
 
     this.currentState = this.createNewState(uid);
+    if (walletAddress) {
+      this.currentState.walletAddress = walletAddress;
+    }
     return this.currentState;
   }
 
@@ -100,6 +115,7 @@ export class ReputationService {
     return {
       uid,
       reputationScore: 0,
+      blockchainScore: 0,
       dailyCheckInPoints: 0,
       totalCheckInDays: 0,
       lastCheckIn: null,
@@ -108,7 +124,9 @@ export class ReputationService {
       adClaimedForCheckIn: null,
       lastCheckInId: null,
       interactionHistory: [],
+      blockchainEvents: [],
       lastUpdated: null,
+      lastBlockchainSync: null,
       isNew: true,
     };
   }
@@ -351,6 +369,115 @@ export class ReputationService {
 
   calculateFullReputation(walletData: WalletActivityData): AtomicReputationResult {
     return calculateAtomicReputation(walletData);
+  }
+
+  async syncBlockchainData(walletAddress: string): Promise<{
+    success: boolean;
+    newEvents: ActivityEvent[];
+    scoreChange: number;
+    newScore: number;
+  }> {
+    if (!this.currentState || !this.uid) {
+      throw new Error('User not loaded');
+    }
+
+    try {
+      console.log('[ReputationService] Syncing blockchain data for:', walletAddress);
+
+      const result = await walletDataService.calculateReputationFromRealData(
+        this.uid,
+        walletAddress
+      );
+
+      const now = new Date();
+      const newBlockchainScore = result.reputation.adjustedScore;
+      const previousBlockchainScore = this.currentState.blockchainScore || 0;
+      const scoreChange = newBlockchainScore - previousBlockchainScore;
+
+      const newState: UserReputationState = {
+        ...this.currentState,
+        walletAddress,
+        blockchainScore: newBlockchainScore,
+        reputationScore: this.currentState.dailyCheckInPoints + newBlockchainScore,
+        blockchainEvents: [
+          ...result.newEvents,
+          ...this.currentState.blockchainEvents.slice(0, 99),
+        ],
+        walletSnapshot: result.comparison.currentSnapshot,
+        lastBlockchainSync: now.toISOString(),
+        lastUpdated: now.toISOString(),
+      };
+
+      await this.saveReputation(newState);
+      this.currentState = newState;
+
+      console.log('[ReputationService] Blockchain sync complete:', {
+        newScore: newBlockchainScore,
+        change: scoreChange,
+        events: result.newEvents.length,
+      });
+
+      return {
+        success: true,
+        newEvents: result.newEvents,
+        scoreChange,
+        newScore: newBlockchainScore,
+      };
+    } catch (error) {
+      console.error('[ReputationService] Blockchain sync error:', error);
+      return {
+        success: false,
+        newEvents: [],
+        scoreChange: 0,
+        newScore: this.currentState?.blockchainScore || 0,
+      };
+    }
+  }
+
+  async addBlockchainEvent(event: ActivityEvent): Promise<boolean> {
+    if (!this.currentState) return false;
+
+    const now = new Date();
+    const newState: UserReputationState = {
+      ...this.currentState,
+      blockchainScore: this.currentState.blockchainScore + event.points,
+      reputationScore: this.currentState.reputationScore + event.points,
+      blockchainEvents: [
+        event,
+        ...this.currentState.blockchainEvents.slice(0, 99),
+      ],
+      lastUpdated: now.toISOString(),
+    };
+
+    await this.saveReputation(newState);
+    this.currentState = newState;
+    return true;
+  }
+
+  getBlockchainScore(): number {
+    return this.currentState?.blockchainScore || 0;
+  }
+
+  getTotalScore(): number {
+    if (!this.currentState) return 0;
+    return (this.currentState.blockchainScore || 0) + 
+           (this.currentState.dailyCheckInPoints || 0);
+  }
+
+  getBlockchainEvents(): ActivityEvent[] {
+    return this.currentState?.blockchainEvents || [];
+  }
+
+  getWalletSnapshot(): WalletSnapshot | undefined {
+    return this.currentState?.walletSnapshot;
+  }
+
+  needsBlockchainSync(): boolean {
+    if (!this.currentState?.lastBlockchainSync) return true;
+    
+    const lastSync = new Date(this.currentState.lastBlockchainSync);
+    const hoursSinceSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60);
+    return hoursSinceSync > 1;
   }
 }
 

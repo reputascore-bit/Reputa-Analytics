@@ -86,11 +86,15 @@ async function handleGetReputation(uid: string, res: VercelResponse) {
       data: {
         uid,
         reputationScore: 0,
+        blockchainScore: 0,
         dailyCheckInPoints: 0,
         totalCheckInDays: 0,
         lastCheckIn: null,
         interactionHistory: [],
+        blockchainEvents: [],
+        walletSnapshot: null,
         lastUpdated: null,
+        lastBlockchainSync: null,
         isNew: true
       }
     });
@@ -101,7 +105,19 @@ async function handleGetReputation(uid: string, res: VercelResponse) {
 }
 
 async function handleSaveReputation(body: any, res: VercelResponse) {
-  const { uid, reputationScore, dailyCheckInPoints, totalCheckInDays, lastCheckIn, interactionHistory } = body;
+  const { 
+    uid, 
+    walletAddress,
+    reputationScore, 
+    blockchainScore,
+    dailyCheckInPoints, 
+    totalCheckInDays, 
+    lastCheckIn, 
+    interactionHistory,
+    blockchainEvents,
+    walletSnapshot,
+    lastBlockchainSync
+  } = body;
 
   if (!uid) {
     return res.status(400).json({ error: 'Missing uid' });
@@ -109,17 +125,22 @@ async function handleSaveReputation(body: any, res: VercelResponse) {
 
   const reputationData = {
     uid,
+    walletAddress: walletAddress || null,
     reputationScore: reputationScore || 0,
+    blockchainScore: blockchainScore || 0,
     dailyCheckInPoints: dailyCheckInPoints || 0,
     totalCheckInDays: totalCheckInDays || 0,
     lastCheckIn: lastCheckIn || null,
-    interactionHistory: interactionHistory || [],
+    interactionHistory: (interactionHistory || []).slice(0, 100),
+    blockchainEvents: (blockchainEvents || []).slice(0, 100),
+    walletSnapshot: walletSnapshot || null,
+    lastBlockchainSync: lastBlockchainSync || null,
     lastUpdated: new Date().toISOString()
   };
 
   await redis.set(`reputation:${uid}`, JSON.stringify(reputationData));
   
-  console.log(`[REPUTATION] Saved for user: ${uid}, score: ${reputationScore}`);
+  console.log(`[REPUTATION] Saved for user: ${uid}, blockchain: ${blockchainScore}, total: ${reputationScore}`);
   return res.status(200).json({ success: true, data: reputationData });
 }
 
@@ -134,10 +155,12 @@ async function handleMergeCheckInPoints(body: any, res: VercelResponse) {
   const parsed = existing ? (typeof existing === 'string' ? JSON.parse(existing) : existing) : {
     uid,
     reputationScore: 0,
+    blockchainScore: 0,
     dailyCheckInPoints: 0,
     totalCheckInDays: 0,
     lastCheckIn: null,
-    interactionHistory: []
+    interactionHistory: [],
+    blockchainEvents: []
   };
 
   if (parsed.dailyCheckInPoints < pointsToMerge) {
@@ -148,17 +171,56 @@ async function handleMergeCheckInPoints(body: any, res: VercelResponse) {
   parsed.dailyCheckInPoints -= pointsToMerge;
   parsed.lastUpdated = new Date().toISOString();
   
-  parsed.interactionHistory.push({
-    type: 'weekly_merge',
-    points: pointsToMerge,
-    timestamp: new Date().toISOString(),
-    description: `Merged ${pointsToMerge} check-in points to reputation`
-  });
+  parsed.interactionHistory = [
+    {
+      type: 'weekly_merge',
+      points: pointsToMerge,
+      timestamp: new Date().toISOString(),
+      description: `Merged ${pointsToMerge} check-in points to reputation`
+    },
+    ...(parsed.interactionHistory || []).slice(0, 99)
+  ];
 
   await redis.set(`reputation:${uid}`, JSON.stringify(parsed));
 
   console.log(`[REPUTATION] Merged ${pointsToMerge} points for user: ${uid}`);
   return res.status(200).json({ success: true, data: parsed });
+}
+
+async function handleGetWalletState(uid: string, res: VercelResponse) {
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  const walletState = await redis.get(`wallet_state:${uid}`);
+  
+  if (!walletState) {
+    return res.status(200).json({
+      success: true,
+      data: null
+    });
+  }
+
+  const parsed = typeof walletState === 'string' ? JSON.parse(walletState) : walletState;
+  return res.status(200).json({ success: true, data: parsed });
+}
+
+async function handleSaveWalletState(body: any, res: VercelResponse) {
+  const { uid, walletState } = body;
+
+  if (!uid || !walletState) {
+    return res.status(400).json({ error: 'Missing uid or walletState' });
+  }
+
+  const stateToSave = {
+    ...walletState,
+    savedAt: new Date().toISOString()
+  };
+
+  await redis.set(`wallet_state:${uid}`, JSON.stringify(stateToSave));
+  
+  console.log(`[WALLET STATE] Saved for user: ${uid}, wallet: ${walletState.walletAddress}`);
+  return res.status(200).json({ success: true, data: stateToSave });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -177,8 +239,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return handleCheckVip(uid as string, res);
         case 'getReputation':
           return handleGetReputation(uid as string, res);
+        case 'getWalletState':
+          return handleGetWalletState(uid as string, res);
         default:
-          return res.status(200).json({ status: "API Ready", endpoints: ["checkVip", "getReputation", "pioneer", "feedback", "saveReputation", "mergePoints"] });
+          return res.status(200).json({ status: "API Ready", endpoints: ["checkVip", "getReputation", "getWalletState", "pioneer", "feedback", "saveReputation", "mergePoints", "saveWalletState"] });
       }
     }
 
@@ -195,8 +259,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return handleSaveReputation(body, res);
         case 'mergePoints':
           return handleMergeCheckInPoints(body, res);
+        case 'saveWalletState':
+          return handleSaveWalletState(body, res);
         default:
-          return res.status(400).json({ error: "Invalid type. Use 'pioneer', 'feedback', 'saveReputation', or 'mergePoints'." });
+          return res.status(400).json({ error: "Invalid type. Use 'pioneer', 'feedback', 'saveReputation', 'mergePoints', or 'saveWalletState'." });
       }
     }
 

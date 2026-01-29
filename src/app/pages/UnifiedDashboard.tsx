@@ -177,8 +177,8 @@ export function UnifiedDashboard({
   }, [atomicResult.adjustedScore, mode.mode]);
 
   const levelProgress = useMemo(() => {
-    return getLevelProgress(mode.mode === 'demo' ? atomicResult.adjustedScore : modeAdjustedScore);
-  }, [atomicResult.adjustedScore, modeAdjustedScore, mode.mode]);
+    return getLevelProgress(modeAdjustedScore);
+  }, [modeAdjustedScore]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -364,9 +364,11 @@ export function UnifiedDashboard({
                     }}
                   >
                     {mode.mode === 'demo' ? (
-                      <span className="flex items-center gap-2">
-                        {levelProgress.displayScore.toLocaleString()}
-                        <span className="text-xs text-gray-500">(Demo)</span>
+                      <span className="flex flex-col items-center">
+                        <span className="line-through text-gray-500">
+                          {atomicResult.adjustedScore.toLocaleString()}
+                        </span>
+                        <span className="text-lg text-gray-400">(Demo - 0%)</span>
                       </span>
                     ) : (
                       levelProgress.displayScore.toLocaleString()

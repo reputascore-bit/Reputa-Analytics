@@ -17,7 +17,7 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
   disabled = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isRTL = language === 'ar';
   
   const modeImpact = MODE_IMPACTS[currentMode];
@@ -38,7 +38,7 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
           <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10B981' }}>
             <Zap className="w-3 h-3" />
-            {isRTL ? 'تأثير كامل' : '100% Impact'}
+            {t('app.mode.impact.full')}
           </span>
         );
       case 'partial':
@@ -46,14 +46,14 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
           <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B' }}>
             <AlertCircle className="w-3 h-3" />
-            {isRTL ? 'تأثير جزئي' : '25% Impact'}
+            {t('app.mode.impact.partial')}
           </span>
         );
       case 'none':
         return (
           <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
             style={{ background: 'rgba(107, 114, 128, 0.2)', color: '#9CA3AF' }}>
-            {isRTL ? 'بدون تأثير' : 'No Impact'}
+            {t('app.mode.impact.none')}
           </span>
         );
     }
@@ -84,14 +84,14 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
         <div className="flex-1 text-left">
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-white">
-              {isRTL ? modeImpact.labelAr : modeImpact.label}
+              {t(`app.mode.${currentMode}`)}
             </span>
             {connected && (
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             )}
           </div>
           <p className="text-[10px] text-gray-400 mt-0.5">
-            {isRTL ? modeImpact.descriptionAr : modeImpact.description}
+            {t(`app.mode.${currentMode}.desc`) || modeImpact.description}
           </p>
         </div>
         
@@ -119,7 +119,7 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
           >
             <div className="p-3 border-b" style={{ borderColor: 'rgba(139, 92, 246, 0.2)' }}>
               <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
-                {isRTL ? 'اختر وضع التشغيل' : 'Select Network Mode'}
+                {t('app.mode.selectMode')}
               </p>
             </div>
             
@@ -157,16 +157,16 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
                   <div className="flex-1 text-left">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-white">
-                        {isRTL ? impact.labelAr : impact.label}
+                        {t(`app.mode.${mode}`)}
                       </span>
                       {isDisabled && (
                         <span className="text-[9px] text-gray-500 uppercase">
-                          {isRTL ? 'يتطلب تسجيل الدخول' : 'Login Required'}
+                          {t('app.mode.loginRequired')}
                         </span>
                       )}
                     </div>
                     <p className="text-[10px] text-gray-400 mt-0.5">
-                      {isRTL ? impact.descriptionAr : impact.description}
+                      {t(`app.mode.${mode}.desc`) || impact.description}
                     </p>
                   </div>
                   
@@ -185,10 +185,7 @@ export const ModeIndicator: React.FC<ModeIndicatorProps> = ({
               background: 'rgba(139, 92, 246, 0.05)'
             }}>
               <p className="text-[10px] text-gray-400 text-center">
-                {isRTL 
-                  ? 'السمعة الحقيقية تعتمد على بيانات Mainnet. Testnet يضيف نقاط مكملة فقط.'
-                  : 'Real reputation is based on Mainnet data. Testnet adds supplementary points only.'
-                }
+                {t('app.mode.footer')}
               </p>
             </div>
           </div>
@@ -203,7 +200,7 @@ export const ModeStatusBadge: React.FC<{ mode: NetworkMode; compact?: boolean }>
   compact = false 
 }) => {
   const impact = MODE_IMPACTS[mode];
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const isRTL = language === 'ar';
   
   const getModeIcon = (m: NetworkMode) => {
@@ -216,6 +213,9 @@ export const ModeStatusBadge: React.FC<{ mode: NetworkMode; compact?: boolean }>
   
   const Icon = getModeIcon(mode);
   
+  const modeKey = mode === 'mainnet' ? 'app.mode.mainnet' : mode === 'testnet' ? 'app.mode.testnet' : 'app.mode.demo';
+  const modeLabel = t(modeKey) || impact.label;
+  
   if (compact) {
     return (
       <div 
@@ -224,12 +224,16 @@ export const ModeStatusBadge: React.FC<{ mode: NetworkMode; compact?: boolean }>
       >
         <Icon className="w-3 h-3" style={{ color: impact.color }} />
         <span className="text-[10px] font-bold uppercase" style={{ color: impact.color }}>
-          {impact.label}
+          {modeLabel}
         </span>
       </div>
     );
   }
   
+  const impactLabel = mode === 'mainnet' ? t('app.mode.impact.full') 
+    : mode === 'testnet' ? t('app.mode.impact.partial') 
+    : t('app.mode.impact.none');
+    
   return (
     <div 
       className="flex items-center gap-2 px-3 py-2 rounded-lg"
@@ -238,10 +242,10 @@ export const ModeStatusBadge: React.FC<{ mode: NetworkMode; compact?: boolean }>
       <Icon className="w-4 h-4" style={{ color: impact.color }} />
       <div>
         <span className="text-xs font-bold" style={{ color: impact.color }}>
-          {isRTL ? impact.labelAr : impact.label}
+          {modeLabel}
         </span>
         <p className="text-[9px] text-gray-400">
-          {impact.impactPercentage}% {isRTL ? 'تأثير' : 'impact'}
+          {impactLabel}
         </p>
       </div>
     </div>

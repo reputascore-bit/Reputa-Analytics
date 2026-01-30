@@ -92,14 +92,40 @@ Check yours at: reputa-score.vercel.app`;
         </button>
 
         <div
-          className="rounded-2xl p-6 overflow-hidden"
+          className="rounded-2xl p-6 overflow-hidden relative"
           style={{
             background: 'linear-gradient(145deg, #0F1117 0%, #1A1D26 50%, #0A0B0F 100%)',
             border: '1px solid rgba(139, 92, 246, 0.3)',
             boxShadow: '0 0 40px rgba(139, 92, 246, 0.2)',
           }}
         >
-          <div className="flex items-center justify-between mb-4">
+          {/* Background Logo Watermark */}
+          <div 
+            className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden"
+            style={{ opacity: 0.04 }}
+          >
+            <svg 
+              viewBox="0 0 200 200" 
+              className="w-[300px] h-[300px]"
+              style={{ transform: 'rotate(-15deg)' }}
+            >
+              <defs>
+                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#8B5CF6" />
+                  <stop offset="100%" stopColor="#00D9FF" />
+                </linearGradient>
+              </defs>
+              <circle cx="100" cy="100" r="90" fill="none" stroke="url(#logoGradient)" strokeWidth="8"/>
+              <circle cx="100" cy="100" r="70" fill="none" stroke="url(#logoGradient)" strokeWidth="4"/>
+              <path d="M100 40 L100 70 M100 130 L100 160 M40 100 L70 100 M130 100 L160 100" stroke="url(#logoGradient)" strokeWidth="6" strokeLinecap="round"/>
+              <text x="100" y="115" textAnchor="middle" fill="url(#logoGradient)" fontSize="50" fontWeight="bold" fontFamily="Arial">R</text>
+            </svg>
+          </div>
+          
+          {/* Decorative corner accents */}
+          <div className="absolute top-0 left-0 w-20 h-20 pointer-events-none" style={{ background: 'radial-gradient(circle at top left, rgba(139, 92, 246, 0.15) 0%, transparent 70%)' }} />
+          <div className="absolute bottom-0 right-0 w-20 h-20 pointer-events-none" style={{ background: 'radial-gradient(circle at bottom right, rgba(0, 217, 255, 0.15) 0%, transparent 70%)' }} />
+          <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="flex items-center gap-2">
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
@@ -114,7 +140,7 @@ Check yours at: reputa-score.vercel.app`;
             </span>
           </div>
 
-          <div className="text-center mb-4">
+          <div className="text-center mb-4 relative z-10">
             <div className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${levelColor}40 0%, ${levelColor}20 100%)`, border: `2px solid ${levelColor}` }}>
               <Trophy className="w-8 h-8" style={{ color: levelColor }} />
             </div>
@@ -127,7 +153,7 @@ Check yours at: reputa-score.vercel.app`;
           </div>
 
           <div 
-            className="rounded-xl p-4 mb-4 text-center"
+            className="rounded-xl p-4 mb-4 text-center relative z-10"
             style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}
           >
             <div className="text-5xl font-black mb-2" style={{ color: '#8B5CF6', textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}>
@@ -136,7 +162,7 @@ Check yours at: reputa-score.vercel.app`;
             <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Reputation Points</div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3 mb-4 relative z-10">
             <div className="rounded-lg p-3 text-center" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="w-4 h-4" style={{ color: levelColor }} />
@@ -150,7 +176,7 @@ Check yours at: reputa-score.vercel.app`;
             </div>
           </div>
 
-          <div className="text-center pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <div className="text-center pt-3 relative z-10" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               reputa-score.vercel.app
             </p>

@@ -17,14 +17,20 @@ export function isPiBrowser(): boolean {
   const isPiUA = ua.includes('pibrowser') || 
                  ua.includes('pi browser') || 
                  ua.includes('pinet') ||
-                 ua.includes('pi network');
+                 ua.includes('pi network') ||
+                 ua.includes('pi_browser');
   
   if (isPiUA) {
     console.log('[PI SDK] Pi Browser detected via User-Agent');
     return true;
   }
   
-  console.log('[PI SDK] Not Pi Browser - User-Agent:', ua.substring(0, 80));
+  if ('Pi' in window && typeof (window as any).Pi?.authenticate === 'function') {
+    console.log('[PI SDK] Pi Browser detected via SDK presence');
+    return true;
+  }
+  
+  console.log('[PI SDK] Not Pi Browser - UA:', ua.substring(0, 100));
   return false;
 }
 

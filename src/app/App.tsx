@@ -238,19 +238,34 @@ function ReputaAppContent() {
     const initApp = async () => {
       console.log('[App] Starting initialization...');
       
-      const checkPiBrowser = () => {
+      const checkPiBrowser = async () => {
         if (typeof window === 'undefined') return false;
         const ua = navigator.userAgent.toLowerCase();
         const isPiUA = ua.includes('pibrowser') || 
                        ua.includes('pi browser') || 
                        ua.includes('pinet') ||
-                       ua.includes('pi network');
-        return isPiUA;
+                       ua.includes('pi network') ||
+                       ua.includes('pi_browser');
+        
+        if (isPiUA) {
+          console.log('[App] Pi Browser detected via UA');
+          return true;
+        }
+        
+        await new Promise(r => setTimeout(r, 800));
+        
+        if ('Pi' in window && typeof (window as any).Pi?.authenticate === 'function') {
+          console.log('[App] Pi Browser detected via SDK');
+          return true;
+        }
+        
+        console.log('[App] Not Pi Browser - UA:', ua.substring(0, 100));
+        return false;
       };
       
-      const detectedPiBrowser = checkPiBrowser();
+      const detectedPiBrowser = await checkPiBrowser();
       setPiBrowser(detectedPiBrowser);
-      console.log('[App] Pi Browser detection:', detectedPiBrowser);
+      console.log('[App] Pi Browser detection result:', detectedPiBrowser);
       
       if (!detectedPiBrowser) {
         console.log('[App] Not in Pi Browser, setting guest/demo user');

@@ -6,6 +6,36 @@ Reputa Score is a React + TypeScript application designed for the Pi Network, fo
 ## User Preferences
 I prefer iterative development with a focus on delivering functional, tested components. Please use clear, concise language in all explanations. Before making any significant architectural changes or adding new major dependencies, please ask for confirmation. Ensure all new features are mobile-first, specifically optimized for the Pi Browser environment, and maintain consistency with the dark, futuristic design theme. Do not modify the existing scoring logic in `atomicScoring.ts` unless explicitly instructed, as it is the single source of truth for reputation calculation.
 
+## ⚠️ CRITICAL - PROTECTED FEATURES (DO NOT MODIFY)
+The following features are CRITICAL to the application and must NEVER be broken or modified without explicit user approval:
+
+### 1. Pi Browser Login/Authentication
+- **Files:** `src/app/services/piSdk.ts`
+- **Function:** `authenticateUser()`, `isPiBrowser()`, `initializePiSDK()`
+- **Purpose:** Connects users via Pi SDK with scopes: username, payments, wallet_address
+- **Rule:** ALWAYS preserve login functionality regardless of any other changes
+
+### 2. User-to-App (U2A) Payments
+- **Files:** `src/app/services/piPayments.ts`
+- **Function:** `createVIPPayment()`
+- **Backend:** `api/payments.ts` → `handleApprove()`, `handleComplete()`
+- **Purpose:** VIP subscription payments from users to app
+- **Rule:** ALWAYS preserve U2A payment flow
+
+### 3. App-to-User (A2U) Payments
+- **Files:** `api/payments.ts`
+- **Functions:** `handleSendPi()`, `submitA2UTransaction()`, `completeA2UPayment()`
+- **Purpose:** Reward payments from app wallet to users
+- **Env Required:** `APP_WALLET_SEED`, `PI_API_KEY`
+- **Rule:** ALWAYS preserve A2U payment flow
+
+### PROTECTION RULES:
+1. Before ANY modification to the above files, verify the change won't break these features
+2. After ANY modification, test login and payment flows still work
+3. If in doubt, ASK the user before proceeding
+4. NEVER delete or rename these files
+5. NEVER remove payment-related imports or functions
+
 ## Recent Changes (January 2026)
 
 ### Pi Browser Detection & Share Feature (Latest)

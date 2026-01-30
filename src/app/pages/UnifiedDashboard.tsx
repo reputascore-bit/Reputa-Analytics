@@ -3,6 +3,8 @@ import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { SideDrawer } from '../components/SideDrawer';
+import { TopBar } from '../components/TopBar';
+import { MainCard } from '../components/MainCard';
 import { TransactionTimeline } from '../components/charts/TransactionTimeline';
 import { PointsBreakdown } from '../components/charts/PointsBreakdown';
 import { RiskActivity } from '../components/charts/RiskActivity';
@@ -270,6 +272,13 @@ export function UnifiedDashboard({
     <div className="min-h-screen futuristic-bg flex">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
       
+      {/* Mobile Top Bar with Menu */}
+      <TopBar 
+        onMenuClick={() => setIsSideDrawerOpen(true)}
+        balance={walletData.balance}
+        username={username}
+      />
+      
       {/* Desktop Sidebar - hidden on mobile */}
       <div className="desktop-sidebar hidden lg:flex">
         <DashboardSidebar 
@@ -280,9 +289,9 @@ export function UnifiedDashboard({
         />
       </div>
 
-      <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content">
-        {/* Minimal Section Header */}
-        <div className="flex items-center justify-between mb-4 sm:mb-5 mobile-header">
+      <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content pt-16 lg:pt-3">
+        {/* Desktop Section Header - hidden on mobile */}
+        <div className="hidden lg:flex items-center justify-between mb-4 sm:mb-5">
           <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={onReset}
@@ -327,158 +336,20 @@ export function UnifiedDashboard({
           </div>
         </div>
 
-        {/* Enhanced Profile & Reputation Card */}
-        <div 
-          className="rounded-2xl p-5 mb-5" 
-          style={{ 
-            background: 'linear-gradient(135deg, rgba(20, 22, 30, 0.95) 0%, rgba(30, 25, 45, 0.9) 100%)',
-            border: `1px solid ${trustColors.border}`,
-            boxShadow: `0 0 40px ${trustColors.bg}, inset 0 1px 0 rgba(255, 255, 255, 0.05)`,
-          }}
-        >
-          {/* User Info Row */}
-          <div className="flex items-center gap-3 mb-4">
-            <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.15) 100%)`,
-                border: `1px solid ${trustColors.border}`,
-                boxShadow: `0 0 20px ${trustColors.bg}`,
-              }}
-            >
-              <User className="w-6 h-6" style={{ color: trustColors.text }} />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-base font-bold text-white/95">{username || 'Pioneer'}</h2>
-              <span className="font-mono text-[11px] text-white/50">{formatAddress(walletData.address)}</span>
-            </div>
-          </div>
-
-          {/* Prominent Reputation Score Display */}
-          <div 
-            className="rounded-xl p-4 mb-4"
-            style={{
-              background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(139, 92, 246, 0.1) 100%)`,
-              border: `1px solid ${trustColors.border}`,
-            }}
-          >
-            <div className="flex items-center justify-between">
-              {/* Score Display */}
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <p 
-                    className="text-4xl font-black tracking-tight"
-                    style={{ 
-                      color: mode.mode === 'demo' ? '#6B7280' : trustColors.text,
-                      textShadow: mode.mode === 'demo' ? 'none' : `0 0 30px ${trustColors.text}50`,
-                    }}
-                  >
-                    {mode.mode === 'demo' ? (
-                      <span className="flex flex-col items-center">
-                        <span className="line-through text-gray-500">
-                          {atomicResult.adjustedScore.toLocaleString()}
-                        </span>
-                        <span className="text-lg text-gray-400">(Demo - 0%)</span>
-                      </span>
-                    ) : (
-                      levelProgress.displayScore.toLocaleString()
-                    )}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-[10px] uppercase text-white/60 font-bold tracking-widest">Reputa Score</p>
-                    {mode.mode !== 'mainnet' && (
-                      <span 
-                        className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded"
-                        style={{ 
-                          background: MODE_IMPACTS[mode.mode].bgColor,
-                          color: MODE_IMPACTS[mode.mode].color,
-                          border: `1px solid ${MODE_IMPACTS[mode.mode].borderColor}`
-                        }}
-                      >
-                        {mode.mode === 'demo' ? '0%' : '25%'}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Vertical Divider */}
-                <div className="w-px h-14 bg-white/10" />
-                
-                {/* Level Badge */}
-                <div className="text-center">
-                  <div 
-                    className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-1"
-                    style={{
-                      background: `linear-gradient(135deg, ${trustColors.text}30 0%, ${trustColors.text}10 100%)`,
-                      border: `2px solid ${trustColors.text}`,
-                      boxShadow: `0 0 25px ${trustColors.text}40`,
-                    }}
-                  >
-                    <span className="text-xl font-black" style={{ color: trustColors.text }}>
-                      {levelProgress.levelIndex + 1}
-                    </span>
-                  </div>
-                  <p className="text-[9px] uppercase text-white/50 font-bold tracking-wider">Level</p>
-                </div>
-              </div>
-
-              {/* Trust Rank Badge */}
-              <div 
-                className="px-4 py-3 rounded-xl text-center"
-                style={{
-                  background: trustColors.bg,
-                  border: `1px solid ${trustColors.border}`,
-                }}
-              >
-                <p 
-                  className="text-sm font-black uppercase tracking-wide"
-                  style={{ color: trustColors.text }}
-                >
-                  {levelProgress.currentLevel}
-                </p>
-                <p className="text-[8px] uppercase text-white/40 font-bold mt-0.5">Trust Rank</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress to Next Level */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span 
-                  className="text-[11px] font-bold uppercase tracking-wide"
-                  style={{ color: trustColors.text }}
-                >
-                  {levelProgress.currentLevel}
-                </span>
-                {levelProgress.nextLevel && (
-                  <>
-                    <span className="text-white/20">→</span>
-                    <span className="text-[11px] font-medium text-white/40">{levelProgress.nextLevel}</span>
-                  </>
-                )}
-              </div>
-              {levelProgress.nextLevel && (
-                <span className="text-[10px] text-white/50 font-medium">
-                  <span style={{ color: trustColors.text }} className="font-bold">{levelProgress.pointsToNextLevel.toLocaleString()}</span> pts to next
-                </span>
-              )}
-            </div>
-            <div className="w-full h-2.5 rounded-full overflow-hidden bg-white/5">
-              <div 
-                className="h-full rounded-full transition-all duration-700 ease-out"
-                style={{ 
-                  width: `${levelProgress.progressInLevel}%`,
-                  background: `linear-gradient(90deg, ${trustColors.text} 0%, #00D9FF 100%)`,
-                  boxShadow: `0 0 15px ${trustColors.text}60`,
-                }}
-              />
-            </div>
-            <div className="flex justify-between mt-1">
-              <span className="text-[9px] text-white/30">{levelProgress.progressInLevel.toFixed(0)}% complete</span>
-              <span className="text-[9px] text-white/30">Max: 1,000</span>
-            </div>
-          </div>
+        {/* Main Profile Card - Always visible at top */}
+        <div className="mb-5">
+          <MainCard
+            username={username || 'Pioneer'}
+            walletAddress={walletData.address}
+            balance={walletData.balance}
+            reputaScore={mode.mode === 'demo' ? 0 : levelProgress.displayScore}
+            level={levelProgress.levelIndex + 1}
+            trustLevel={levelProgress.currentLevel}
+            progressPercent={Math.round(levelProgress.progressInLevel)}
+            pointsToNext={levelProgress.pointsToNextLevel}
+            maxPoints={getBackendScoreCap()}
+            isVip={isProUser}
+          />
         </div>
 
         {/* Section Navigation - Hidden on mobile (using bottom nav) */}

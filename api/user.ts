@@ -3,7 +3,7 @@
  * Handles: VIP check, save pioneer data, save feedback, user reputation storage
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node'; 
 import { Redis } from '@upstash/redis';
 
 const redis = new Redis({

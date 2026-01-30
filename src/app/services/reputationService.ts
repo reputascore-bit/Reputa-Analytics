@@ -52,12 +52,16 @@ export interface InteractionEvent {
   description: string;
 }
 
-const API_BASE = '/api/user';
+const API_USER = '/api/user';
+const API_REPUTATION = '/api/reputation';
 
 export class ReputationService {
   private static instance: ReputationService;
   private currentState: UserReputationState | null = null;
   private uid: string | null = null;
+  private isDemo: boolean = false;
+  private syncQueue: Array<{ action: string; data: any }> = [];
+  private isSyncing: boolean = false;
 
   private constructor() {}
 
@@ -79,34 +83,46 @@ export class ReputationService {
   async loadUserReputation(uid: string, walletAddress?: string): Promise<UserReputationState> {
     this.uid = uid;
 
+    if (this.isDemo) {
+      this.currentState = this.createNewState(uid);
+      if (walletAddress) this.currentState.walletAddress = walletAddress;
+      return this.currentState;
+    }
+
     try {
-      const response = await fetch(`${API_BASE}?action=getReputation&uid=${encodeURIComponent(uid)}`);
+      const response = await fetch(`${API_REPUTATION}?action=get&uid=${encodeURIComponent(uid)}`);
       const data = await response.json();
 
       if (data.success && data.data) {
         this.currentState = {
           uid,
           walletAddress: data.data.walletAddress || walletAddress,
-          reputationScore: data.data.reputationScore || 0,
+          reputationScore: data.data.totalReputationScore || 0,
           blockchainScore: data.data.blockchainScore || 0,
-          dailyCheckInPoints: data.data.dailyCheckInPoints || 0,
+          dailyCheckInPoints: data.data.checkInScore || 0,
           totalCheckInDays: data.data.totalCheckInDays || 0,
-          lastCheckIn: data.data.lastCheckIn || null,
-          lastAdWatch: data.data.lastAdWatch || null,
-          streak: data.data.streak || 0,
-          adClaimedForCheckIn: data.data.adClaimedForCheckIn || null,
-          lastCheckInId: data.data.lastCheckInId || null,
-          interactionHistory: data.data.interactionHistory || [],
-          blockchainEvents: data.data.blockchainEvents || [],
-          walletSnapshot: data.data.walletSnapshot || undefined,
+          lastCheckIn: data.data.lastCheckInDate || null,
+          lastAdWatch: null,
+          streak: data.data.currentStreak || 0,
+          adClaimedForCheckIn: null,
+          lastCheckInId: null,
+          interactionHistory: (data.data.recentEvents || []).map((e: any) => ({
+            type: e.type,
+            points: e.points,
+            timestamp: e.timestamp,
+            description: e.description,
+          })),
+          blockchainEvents: [],
+          walletSnapshot: undefined,
           lastUpdated: data.data.lastUpdated || null,
-          lastBlockchainSync: data.data.lastBlockchainSync || null,
-          isNew: data.data.isNew || false,
+          lastBlockchainSync: data.data.lastScanTimestamp || null,
+          isNew: !data.data.lastUpdated,
         };
+        this.saveLocalState(this.currentState);
         return this.currentState;
       }
     } catch (error) {
-      console.error('[ReputationService] Error loading reputation:', error);
+      console.error('[ReputationService] Error loading from KV API, trying local:', error);
     }
 
     const fallback = this.getLocalState(uid);
@@ -163,33 +179,94 @@ export class ReputationService {
   }
 
   async saveReputation(state: UserReputationState): Promise<boolean> {
-    try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'saveReputation',
-          ...state,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        this.currentState = state;
-        this.saveLocalState(state);
-        return true;
-      }
-    } catch (error) {
-      console.error('[ReputationService] Error saving reputation:', error);
-      this.saveLocalState(state);
+    if (this.isDemo) {
+      this.currentState = state;
+      return true;
     }
-    return false;
+
+    this.currentState = state;
+    this.saveLocalState(state);
+    return true;
+  }
+
+  setDemoMode(isDemo: boolean): void {
+    this.isDemo = isDemo;
+    console.log(`[ReputationService] Demo mode: ${isDemo}`);
+  }
+
+  isDemoMode(): boolean {
+    return this.isDemo;
   }
 
   async performDailyCheckIn(): Promise<{ success: boolean; pointsEarned: number; newState: UserReputationState }> {
     if (!this.currentState || !this.uid) {
       throw new Error('User not loaded');
+    }
+
+    if (this.isDemo) {
+      return this.performDemoCheckIn();
+    }
+
+    try {
+      const response = await fetch(API_REPUTATION, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'checkIn',
+          uid: this.uid,
+          walletAddress: this.currentState.walletAddress,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const newState: UserReputationState = {
+          ...this.currentState,
+          reputationScore: data.data.totalReputationScore,
+          dailyCheckInPoints: this.currentState.dailyCheckInPoints + data.data.pointsEarned,
+          totalCheckInDays: data.data.totalCheckInDays,
+          lastCheckIn: new Date().toISOString(),
+          streak: data.data.currentStreak,
+          interactionHistory: [
+            {
+              type: 'daily_checkin',
+              points: data.data.pointsEarned,
+              timestamp: new Date().toISOString(),
+              description: `Daily check-in (+${data.data.basePoints} pts${data.data.streakBonus > 0 ? `, +${data.data.streakBonus} streak bonus` : ''})`,
+            },
+            ...this.currentState.interactionHistory.slice(0, 99),
+          ],
+          lastUpdated: new Date().toISOString(),
+        };
+        this.currentState = newState;
+        this.saveLocalState(newState);
+        return { success: true, pointsEarned: data.data.pointsEarned, newState };
+      } else {
+        return { success: false, pointsEarned: 0, newState: this.currentState };
+      }
+    } catch (error) {
+      console.error('[ReputationService] Check-in API error, using local fallback:', error);
+      return this.performLocalCheckIn();
+    }
+  }
+
+  private performDemoCheckIn(): { success: boolean; pointsEarned: number; newState: UserReputationState } {
+    if (!this.currentState) {
+      return { success: false, pointsEarned: 0, newState: this.createNewState(this.uid || 'demo') };
+    }
+    const basePoints = SCORING_RULES.DAILY_CHECKIN.basePoints;
+    const newState = { ...this.currentState };
+    newState.dailyCheckInPoints += basePoints;
+    newState.totalCheckInDays += 1;
+    newState.streak = (newState.streak || 0) + 1;
+    this.currentState = newState;
+    return { success: true, pointsEarned: basePoints, newState };
+  }
+
+  private async performLocalCheckIn(): Promise<{ success: boolean; pointsEarned: number; newState: UserReputationState }> {
+    if (!this.currentState) {
+      return { success: false, pointsEarned: 0, newState: this.createNewState(this.uid || 'local') };
     }
 
     const canCheck = this.canPerformCheckIn();
@@ -226,19 +303,104 @@ export class ReputationService {
       lastUpdated: now.toISOString(),
     };
 
-    await this.saveReputation(newState);
+    this.saveLocalState(newState);
+    this.addToSyncQueue('checkIn', { uid: this.uid, walletAddress: this.currentState.walletAddress });
     this.currentState = newState;
 
-    return {
-      success: true,
-      pointsEarned: totalPointsEarned,
-      newState,
-    };
+    return { success: true, pointsEarned: totalPointsEarned, newState };
+  }
+
+  private addToSyncQueue(action: string, data: any): void {
+    this.syncQueue.push({ action, data });
+    this.trySyncQueue();
+  }
+
+  private async trySyncQueue(): Promise<void> {
+    if (this.isSyncing || this.syncQueue.length === 0) return;
+    
+    this.isSyncing = true;
+    while (this.syncQueue.length > 0) {
+      const item = this.syncQueue[0];
+      try {
+        await fetch(API_REPUTATION, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: item.action, ...item.data }),
+        });
+        this.syncQueue.shift();
+      } catch (error) {
+        console.error('[ReputationService] Sync failed, will retry:', error);
+        break;
+      }
+    }
+    this.isSyncing = false;
   }
 
   async claimAdBonus(): Promise<{ success: boolean; pointsEarned: number; newState: UserReputationState }> {
     if (!this.currentState || !this.uid) {
       throw new Error('User not loaded');
+    }
+
+    if (this.isDemo) {
+      return this.claimDemoAdBonus();
+    }
+
+    try {
+      const response = await fetch(API_REPUTATION, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'claimAdBonus',
+          uid: this.uid,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const adBonusPoints = data.data.pointsEarned;
+        const newState: UserReputationState = {
+          ...this.currentState,
+          reputationScore: data.data.totalReputationScore,
+          dailyCheckInPoints: this.currentState.dailyCheckInPoints + adBonusPoints,
+          lastAdWatch: new Date().toISOString(),
+          adClaimedForCheckIn: this.currentState.lastCheckInId,
+          interactionHistory: [
+            {
+              type: 'ad_bonus',
+              points: adBonusPoints,
+              timestamp: new Date().toISOString(),
+              description: `Ad bonus claimed (+${adBonusPoints} pts)`,
+            },
+            ...this.currentState.interactionHistory.slice(0, 99),
+          ],
+          lastUpdated: new Date().toISOString(),
+        };
+        this.currentState = newState;
+        this.saveLocalState(newState);
+        return { success: true, pointsEarned: adBonusPoints, newState };
+      }
+      return { success: false, pointsEarned: 0, newState: this.currentState };
+    } catch (error) {
+      console.error('[ReputationService] Ad bonus API error:', error);
+      return this.claimLocalAdBonus();
+    }
+  }
+
+  private claimDemoAdBonus(): { success: boolean; pointsEarned: number; newState: UserReputationState } {
+    if (!this.currentState) {
+      return { success: false, pointsEarned: 0, newState: this.createNewState(this.uid || 'demo') };
+    }
+    const adBonusPoints = SCORING_RULES.AD_BONUS.basePoints;
+    const newState = { ...this.currentState };
+    newState.dailyCheckInPoints += adBonusPoints;
+    this.currentState = newState;
+    return { success: true, pointsEarned: adBonusPoints, newState };
+  }
+
+  private async claimLocalAdBonus(): Promise<{ success: boolean; pointsEarned: number; newState: UserReputationState }> {
+    if (!this.currentState) {
+      return { success: false, pointsEarned: 0, newState: this.createNewState(this.uid || 'local') };
     }
 
     const now = new Date();
@@ -261,7 +423,8 @@ export class ReputationService {
       lastUpdated: now.toISOString(),
     };
 
-    await this.saveReputation(newState);
+    this.saveLocalState(newState);
+    this.addToSyncQueue('claimAdBonus', { uid: this.uid });
     this.currentState = newState;
 
     return {
@@ -286,34 +449,14 @@ export class ReputationService {
       return { success: false, newState: this.currentState };
     }
 
-    try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'mergePoints',
-          uid: this.uid,
-          pointsToMerge: points,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.data) {
-        const newState: UserReputationState = {
-          ...this.currentState,
-          reputationScore: data.data.reputationScore,
-          dailyCheckInPoints: data.data.dailyCheckInPoints,
-          interactionHistory: data.data.interactionHistory || this.currentState.interactionHistory,
-          lastUpdated: data.data.lastUpdated,
-        };
-
-        this.currentState = newState;
-        this.saveLocalState(newState);
-        return { success: true, newState };
-      }
-    } catch (error) {
-      console.error('[ReputationService] Error merging points:', error);
+    if (this.isDemo) {
+      const newState: UserReputationState = {
+        ...this.currentState,
+        reputationScore: this.currentState.reputationScore + points,
+        dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
+      };
+      this.currentState = newState;
+      return { success: true, newState };
     }
 
     const now = new Date();
@@ -340,7 +483,7 @@ export class ReputationService {
 
   canCheckIn(): { canCheckIn: boolean; countdown: string; hoursRemaining: number } {
     const result = this.canPerformCheckIn();
-    const COOLDOWN_HOURS = SCORING_RULES.DAILY_CHECKIN.cooldownHours;
+    const COOLDOWN_MS = SCORING_RULES.DAILY_CHECKIN.cooldown || 24 * 60 * 60 * 1000;
     const hoursRemaining = result.remainingMs > 0 ? result.remainingMs / (1000 * 60 * 60) : 0;
     return {
       canCheckIn: result.canCheckIn,

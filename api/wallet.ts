@@ -3,7 +3,7 @@
  * GET/POST wallet data with dynamic transaction history from Redis
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'; 
+import type { VercelRequest, VercelResponse } from '@vercel/node';  
 import { Redis } from '@upstash/redis';
 
 const redis = new Redis({

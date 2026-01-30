@@ -4,7 +4,7 @@
  */
 
 export interface Transaction { 
-  id: string;
+  id: string; 
   timestamp: Date;
   amount: number;
   from: string;

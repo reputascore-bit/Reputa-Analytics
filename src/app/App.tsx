@@ -130,6 +130,27 @@ function ReputaAppContent() {
     setIsPayoutLoading(true);
     
     try {
+      // 1. Solve incomplete payments locally using Pi SDK before trying to create a new one
+      if (typeof window !== 'undefined' && (window as any).Pi) {
+        try {
+          console.log('[A2U] Checking for incomplete payments via SDK...');
+          const incompletePayments = await (window as any).Pi.getIncompleteServerPayments();
+          if (incompletePayments && incompletePayments.length > 0) {
+            console.log(`[A2U] Found ${incompletePayments.length} incomplete payments. Resolving...`);
+            for (const payment of incompletePayments) {
+              await fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'cancel', paymentId: payment.identifier }),
+              });
+            }
+            alert("✅ Incomplete payments resolved. Retrying...");
+          }
+        } catch (sdkErr) {
+          console.warn('SDK incomplete payment check failed', sdkErr);
+        }
+      }
+
       const statusCheck = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

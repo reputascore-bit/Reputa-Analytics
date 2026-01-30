@@ -595,6 +595,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'complete':
         return handleComplete(body, res);
       
+      case 'cancel':
+        if (!paymentId) return res.status(400).json({ error: 'Missing paymentId' });
+        try {
+          const cancelRes = await fetch(`${PI_API_BASE}/payments/${paymentId}/cancel`, {
+            method: 'POST',
+            headers: { 
+              'Authorization': `Key ${PI_API_KEY}`, 
+              'Content-Type': 'application/json' 
+            }
+          });
+          const cancelData = await cancelRes.json();
+          console.log(`[A2U] Cancelled payment ${paymentId}:`, cancelData);
+          return res.status(cancelRes.status).json(cancelData);
+        } catch (err: any) {
+          return res.status(500).json({ error: err.message });
+        }
+      
       case 'payout':
         return handlePayout(body, res);
       

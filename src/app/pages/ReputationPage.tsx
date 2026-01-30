@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react'; 
 import { ArrowLeft, Shield, Star, Activity, Clock, TrendingUp, CheckCircle, AlertCircle, Zap, Award, Target, BarChart3 } from 'lucide-react';
 import { fetchReputationData, ReputationData } from '../services/piNetworkData';
 import { 

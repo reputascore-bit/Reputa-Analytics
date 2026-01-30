@@ -230,8 +230,12 @@ Check yours at: reputa-score.vercel.app`;
     }
   };
 
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+
   const handleShareImage = async () => {
     setIsGenerating(true);
+    setShareError(null);
     
     try {
       const imageBlob = await generateCardImage();
@@ -241,19 +245,49 @@ Check yours at: reputa-score.vercel.app`;
 
       const file = new File([imageBlob], 'reputa-score.png', { type: 'image/png' });
 
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: 'My Reputa Score',
-          text: shareText,
-          files: [file]
-        });
-      } else if (navigator.share) {
-        await navigator.share({
-          title: 'My Reputa Score',
-          text: shareText,
-          url: 'https://reputa-score.vercel.app'
-        });
-      } else {
+      let shared = false;
+      
+      try {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'My Reputa Score',
+            text: shareText,
+            files: [file]
+          });
+          shared = true;
+          setShareSuccess(true);
+          setTimeout(() => setShareSuccess(false), 3000);
+        }
+      } catch (fileShareError: any) {
+        if ((fileShareError as any).name === 'AbortError') {
+          shared = true;
+        } else {
+          console.log('[Share] File sharing not supported, trying text share');
+        }
+      }
+
+      if (!shared) {
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: 'My Reputa Score',
+              text: shareText,
+              url: 'https://reputa-score.vercel.app'
+            });
+            shared = true;
+            setShareSuccess(true);
+            setTimeout(() => setShareSuccess(false), 3000);
+          }
+        } catch (textShareError: any) {
+          if (textShareError.name === 'AbortError') {
+            shared = true;
+          } else {
+            console.log('[Share] Text sharing failed, falling back to download');
+          }
+        }
+      }
+
+      if (!shared) {
         const url = URL.createObjectURL(imageBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -262,11 +296,17 @@ Check yours at: reputa-score.vercel.app`;
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        await navigator.clipboard.writeText(shareText);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error('Share failed:', error);
-        handleCopy();
+        setShareError('Share failed. Try Copy or Save instead.');
+        setTimeout(() => setShareError(null), 3000);
+        await handleCopy();
       }
     } finally {
       setIsGenerating(false);
@@ -422,6 +462,19 @@ Check yours at: reputa-score.vercel.app`;
           </div>
         </div>
 
+        {(shareSuccess || shareError) && (
+          <div 
+            className="mt-3 p-3 rounded-xl text-center text-sm font-medium"
+            style={{
+              background: shareSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+              border: shareSuccess ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
+              color: shareSuccess ? '#10B981' : '#EF4444',
+            }}
+          >
+            {shareSuccess ? '✓ Image saved & text copied!' : shareError}
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2 mt-4">
           <button
             onClick={handleCopy}
@@ -454,13 +507,13 @@ Check yours at: reputa-score.vercel.app`;
             disabled={isGenerating}
             className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95"
             style={{
-              background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
+              background: shareSuccess ? 'rgba(16, 185, 129, 0.3)' : 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
               color: 'white',
               opacity: isGenerating ? 0.6 : 1
             }}
           >
-            <Share2 className="w-5 h-5" />
-            <span className="text-xs">Share</span>
+            {shareSuccess ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+            <span className="text-xs">{shareSuccess ? 'Done!' : 'Share'}</span>
           </button>
         </div>
       </div>

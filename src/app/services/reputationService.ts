@@ -114,46 +114,61 @@ export class ReputationService {
       return this.currentState!;
     }
 
+    const localState = this.getLocalState(uid);
+
     try {
       const response = await fetch(`${API_REPUTATION}?action=get&uid=${encodeURIComponent(uid)}`);
       const data = await response.json();
 
       if (data.success && data.data) {
-        this.currentState = {
-          uid,
-          walletAddress: data.data.walletAddress || walletAddress,
-          reputationScore: data.data.totalReputationScore || 0,
-          blockchainScore: data.data.blockchainScore || 0,
-          dailyCheckInPoints: data.data.checkInScore || 0,
-          totalCheckInDays: data.data.totalCheckInDays || 0,
-          lastCheckIn: data.data.lastCheckInDate || null,
-          lastAdWatch: null,
-          streak: data.data.currentStreak || 0,
-          adClaimedForCheckIn: null,
-          lastCheckInId: null,
-          interactionHistory: (data.data.recentEvents || []).map((e: any) => ({
-            type: e.type,
-            points: e.points,
-            timestamp: e.timestamp,
-            description: e.description,
-          })),
-          blockchainEvents: [],
-          walletSnapshot: undefined,
-          lastUpdated: data.data.lastUpdated || null,
-          lastBlockchainSync: data.data.lastScanTimestamp || null,
-          isNew: !data.data.lastUpdated,
-        };
-        this.saveLocalState(this.currentState);
-        return this.currentState;
+        const apiHasData = data.data.lastUpdated || 
+                           data.data.reputationScore > 0 || 
+                           data.data.blockchainScore > 0 ||
+                           data.data.totalCheckInDays > 0;
+        
+        if (apiHasData) {
+          this.currentState = {
+            uid,
+            walletAddress: data.data.walletAddress || walletAddress,
+            reputationScore: data.data.totalReputationScore || data.data.reputationScore || 0,
+            blockchainScore: data.data.blockchainScore || 0,
+            dailyCheckInPoints: data.data.checkInScore || data.data.dailyCheckInPoints || 0,
+            totalCheckInDays: data.data.totalCheckInDays || 0,
+            lastCheckIn: data.data.lastCheckInDate || data.data.lastCheckIn || null,
+            lastAdWatch: null,
+            streak: data.data.currentStreak || data.data.streak || 0,
+            adClaimedForCheckIn: null,
+            lastCheckInId: null,
+            interactionHistory: (data.data.recentEvents || data.data.interactionHistory || []).map((e: any) => ({
+              type: e.type,
+              points: e.points,
+              timestamp: e.timestamp,
+              description: e.description,
+            })),
+            blockchainEvents: data.data.blockchainEvents || [],
+            walletSnapshot: data.data.walletSnapshot,
+            lastUpdated: data.data.lastUpdated || null,
+            lastBlockchainSync: data.data.lastScanTimestamp || data.data.lastBlockchainSync || null,
+            isNew: false,
+          };
+          this.saveLocalState(this.currentState);
+          console.log('[ReputationService] Loaded from API:', this.currentState.reputationScore);
+          return this.currentState;
+        } else if (localState && (localState.reputationScore > 0 || localState.totalCheckInDays > 0)) {
+          console.log('[ReputationService] API empty, using local state:', localState.reputationScore);
+          this.currentState = localState;
+          this.syncLocalToServer(localState);
+          return localState;
+        }
       }
     } catch (error) {
       console.error('[ReputationService] Error loading from KV API, trying local:', error);
     }
 
-    const fallback = this.getLocalState(uid);
-    if (fallback) {
-      this.currentState = fallback;
-      return fallback;
+    if (localState && (localState.reputationScore > 0 || localState.totalCheckInDays > 0)) {
+      console.log('[ReputationService] Using local fallback:', localState.reputationScore);
+      this.currentState = localState;
+      return localState;
     }
 
     this.currentState = this.createNewState(uid);
@@ -200,6 +215,33 @@ export class ReputationService {
       localStorage.setItem(`reputation_${state.uid}`, JSON.stringify(state));
     } catch (e) {
       console.error('[ReputationService] Error saving local state:', e);
+    }
+  }
+
+  private async syncLocalToServer(state: UserReputationState): Promise<void> {
+    try {
+      console.log('[ReputationService] Syncing local state to server for uid:', state.uid);
+      await fetch(`${API_USER}?action=saveReputation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'saveReputation',
+          uid: state.uid,
+          walletAddress: state.walletAddress,
+          reputationScore: state.reputationScore,
+          blockchainScore: state.blockchainScore,
+          dailyCheckInPoints: state.dailyCheckInPoints,
+          totalCheckInDays: state.totalCheckInDays,
+          lastCheckIn: state.lastCheckIn,
+          interactionHistory: state.interactionHistory,
+          blockchainEvents: state.blockchainEvents,
+          walletSnapshot: state.walletSnapshot,
+          lastBlockchainSync: state.lastBlockchainSync,
+        }),
+      });
+      console.log('[ReputationService] Successfully synced to server');
+    } catch (error) {
+      console.error('[ReputationService] Failed to sync to server:', error);
     }
   }
 

@@ -2,7 +2,7 @@
  * Pi Payment Module - Handle Pi Network Testnet payments
  */
 
-import type { PaymentData } from './types';
+import type { PaymentData } from './types'; 
 
 interface PiSDK {
   init: (options: { version: string }) => Promise<void>;

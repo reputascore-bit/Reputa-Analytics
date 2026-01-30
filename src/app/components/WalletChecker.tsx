@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; 
 import { Search, Shield, Zap, Activity, Globe, Cpu, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import logoImage from '../../assets/logo-new.png';

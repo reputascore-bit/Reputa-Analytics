@@ -52,6 +52,14 @@ The following features are CRITICAL to the application and must NEVER be broken 
 - **Import Fixes:** Fixed all import issues in ReputaDashboard components to use correct payment service
 - **Type Declarations:** Added image type declarations for PNG/SVG/JPG imports
 
+### Unified Reputation Overview (Jan 31, 2026)
+- **UnifiedReputaOverview Component:** New component merging Overview visual design with Atomic Protocol scoring
+- **Single Protocol:** Removed separate Overview/Atomic tabs - now only uses Atomic Protocol for all scoring
+- **Score Breakdown:** Shows 5 atomic categories: Pi Network Transactions, Wallet Age, Interaction, Pi Dex Activity, Staking
+- **7 Trust Levels:** Elite, Pioneer+, Trusted, Active, Medium, Low Trust, Very Low Trust (from atomicScoring.ts)
+- **Quick Stats:** Transactions, Account Age, Activity Level, Trust Percentile - all derived from atomic data
+- **Detailed Breakdown Toggle:** Optional detailed view using AtomicScoreBreakdown component
+
 ### UI/UX Mobile Improvements
 - **TopBar Component:** Fixed top navigation bar for mobile with menu button, wallet balance display, and notification icon
 - **MainCard Component:** Persistent profile card with professional design showing user info, wallet balance, reputa score, level, trust rank, and progress bar - always visible across navigations

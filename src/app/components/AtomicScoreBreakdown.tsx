@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, 
@@ -298,13 +298,14 @@ export function AtomicScoreBreakdown({ result, language = 'en' }: AtomicScoreBre
           {language === 'ar' ? 'تفاصيل النقاط' : 'Score Breakdown'}
         </h4>
         {categories.map(cat => (
-          <CategoryCard
-            key={cat.key}
-            category={cat.key}
-            items={cat.items}
-            totalPoints={cat.total}
-            language={language}
-          />
+          <div key={cat.key}>
+            <CategoryCard
+              category={cat.key}
+              items={cat.items}
+              totalPoints={cat.total}
+              language={language}
+            />
+          </div>
         ))}
       </div>
       

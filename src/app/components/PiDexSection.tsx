@@ -2,7 +2,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { Wallet, ArrowUpRight, ArrowDownLeft, RefreshCw, ExternalLink, Coins } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
-interface PiDexSectionProps {
+interface PiDexSectionProps { 
   walletAddress?: string;
   balance?: number;
   totalSent?: number;

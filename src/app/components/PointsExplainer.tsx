@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; 
 import { Info, X, Zap, Gift, Activity, TrendingUp, Award, ArrowRight, Star, ChevronLeft } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { 

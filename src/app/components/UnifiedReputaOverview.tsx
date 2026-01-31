@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'; 
-import { motion } from 'motion/react';
+import { motion } from 'motion/react'; 
 import { 
   Shield, 
   Star, 

@@ -1,4 +1,4 @@
-import { ChartReputationScore } from '../protocol/types';
+import { ChartReputationScore } from '../protocol/types'; 
 import { useLanguage } from '../hooks/useLanguage';
 import { BarChart3 } from 'lucide-react';
 

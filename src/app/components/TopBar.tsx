@@ -1,4 +1,4 @@
-import { Menu, Wallet, Bell } from 'lucide-react';
+import { Menu, Wallet, Bell } from 'lucide-react'; 
 
 interface TopBarProps {
   onMenuClick: () => void;

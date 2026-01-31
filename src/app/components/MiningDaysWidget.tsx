@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from 'react'; 
 import { Pickaxe, Info, X, Calendar, TrendingUp, Lock, Unlock } from 'lucide-react'; 
 import { useLanguage } from '../hooks/useLanguage';
 

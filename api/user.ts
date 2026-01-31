@@ -11,6 +11,18 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || '',
 });
 
+type AtomicTrustLevel = 'Very Low Trust' | 'Low Trust' | 'Medium' | 'Active' | 'Trusted' | 'Pioneer+' | 'Elite';
+
+function computeTrustLevel(score: number): AtomicTrustLevel {
+  if (score >= 800) return 'Elite';
+  if (score >= 650) return 'Pioneer+';
+  if (score >= 500) return 'Trusted';
+  if (score >= 350) return 'Active';
+  if (score >= 200) return 'Medium';
+  if (score >= 100) return 'Low Trust';
+  return 'Very Low Trust';
+}
+
 function setCorsHeaders(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -107,6 +119,7 @@ async function handleGetReputation(uid: string, res: VercelResponse) {
 async function handleSaveReputation(body: any, res: VercelResponse) {
   const { 
     uid, 
+    username,
     walletAddress,
     reputationScore, 
     blockchainScore,
@@ -116,7 +129,8 @@ async function handleSaveReputation(body: any, res: VercelResponse) {
     interactionHistory,
     blockchainEvents,
     walletSnapshot,
-    lastBlockchainSync
+    lastBlockchainSync,
+    trustLevel
   } = body;
 
   if (!uid) {
@@ -125,6 +139,7 @@ async function handleSaveReputation(body: any, res: VercelResponse) {
 
   const reputationData = {
     uid,
+    username: username || null,
     walletAddress: walletAddress || null,
     reputationScore: reputationScore || 0,
     blockchainScore: blockchainScore || 0,
@@ -135,13 +150,90 @@ async function handleSaveReputation(body: any, res: VercelResponse) {
     blockchainEvents: (blockchainEvents || []).slice(0, 100),
     walletSnapshot: walletSnapshot || null,
     lastBlockchainSync: lastBlockchainSync || null,
+    trustLevel: trustLevel || 'Low Trust',
     lastUpdated: new Date().toISOString()
   };
 
   await redis.set(`reputation:${uid}`, JSON.stringify(reputationData));
   
+  const computedTrustLevel = computeTrustLevel(reputationScore || 0);
+  
+  if (reputationScore > 0) {
+    await redis.zadd('leaderboard:reputation', { score: reputationScore, member: uid });
+    
+    const leaderboardEntry = {
+      uid,
+      username: username || null,
+      walletAddress: walletAddress || null,
+      reputationScore: reputationScore || 0,
+      trustLevel: computedTrustLevel,
+      lastUpdated: new Date().toISOString()
+    };
+    await redis.set(`leaderboard_entry:${uid}`, JSON.stringify(leaderboardEntry));
+  } else {
+    await redis.zrem('leaderboard:reputation', uid);
+    await redis.del(`leaderboard_entry:${uid}`);
+  }
+  
   console.log(`[REPUTATION] Saved for user: ${uid}, blockchain: ${blockchainScore}, total: ${reputationScore}`);
   return res.status(200).json({ success: true, data: reputationData });
+}
+
+async function handleGetTopUsers(query: any, res: VercelResponse) {
+  const limit = Math.min(parseInt(query.limit as string) || 100, 100);
+  const offset = parseInt(query.offset as string) || 0;
+  
+  try {
+    const topUserIds = await redis.zrange('leaderboard:reputation', offset, offset + limit - 1, { rev: true, withScores: true });
+    
+    if (!topUserIds || topUserIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          users: [],
+          total: 0,
+          limit,
+          offset
+        }
+      });
+    }
+
+    const users: any[] = [];
+    
+    for (let i = 0; i < topUserIds.length; i += 2) {
+      const uid = topUserIds[i] as string;
+      const score = topUserIds[i + 1] as number;
+      
+      const entryData = await redis.get(`leaderboard_entry:${uid}`);
+      const entry = entryData ? (typeof entryData === 'string' ? JSON.parse(entryData) : entryData) : null;
+      
+      users.push({
+        rank: offset + (i / 2) + 1,
+        uid,
+        username: entry?.username || `Pioneer_${uid.substring(0, 6)}`,
+        walletAddress: entry?.walletAddress || null,
+        reputationScore: score,
+        trustLevel: computeTrustLevel(score),
+        lastUpdated: entry?.lastUpdated || null
+      });
+    }
+
+    const totalCount = await redis.zcard('leaderboard:reputation');
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        users,
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount
+      }
+    });
+  } catch (error: any) {
+    console.error('[TOP USERS] Error:', error);
+    return res.status(500).json({ error: 'Failed to fetch top users', message: error.message });
+  }
 }
 
 async function handleMergeCheckInPoints(body: any, res: VercelResponse) {
@@ -241,8 +333,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return handleGetReputation(uid as string, res);
         case 'getWalletState':
           return handleGetWalletState(uid as string, res);
+        case 'getTopUsers':
+          return handleGetTopUsers(req.query, res);
         default:
-          return res.status(200).json({ status: "API Ready", endpoints: ["checkVip", "getReputation", "getWalletState", "pioneer", "feedback", "saveReputation", "mergePoints", "saveWalletState"] });
+          return res.status(200).json({ status: "API Ready", endpoints: ["checkVip", "getReputation", "getWalletState", "getTopUsers", "pioneer", "feedback", "saveReputation", "mergePoints", "saveWalletState"] });
       }
     }
 

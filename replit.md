@@ -60,6 +60,13 @@ The following features are CRITICAL to the application and must NEVER be broken 
 - **Quick Stats:** Transactions, Account Age, Activity Level, Trust Percentile - all derived from atomic data
 - **Detailed Breakdown Toggle:** Optional detailed view using AtomicScoreBreakdown component
 
+### Top 100 Reputa Leaderboard (Jan 31, 2026)
+- **Leaderboard API:** New `getTopUsers` endpoint in api/user.ts using Redis Sorted Sets for efficient ranking
+- **Reputation Leaderboard:** Users are ranked by their Reputa Score (from Atomic Protocol), not Pi balance
+- **TopWalletsWidget Updated:** Now displays Top 100 users by reputation score with trust levels
+- **Demo Data:** When no real data available, shows demo users with sample reputation scores
+- **Real-time Updates:** When users save their reputation, they're automatically added to the leaderboard
+
 ### UI/UX Mobile Improvements
 - **TopBar Component:** Fixed top navigation bar for mobile with menu button, wallet balance display, and notification icon
 - **MainCard Component:** Persistent profile card with professional design showing user info, wallet balance, reputa score, level, trust rank, and progress bar - always visible across navigations

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'; 
+import React, { useState, useRef, useEffect } from 'react';  
 import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image } from 'lucide-react';
 
 interface ShareReputaCardProps {

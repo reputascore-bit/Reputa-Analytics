@@ -11,7 +11,7 @@
  * تم تحسينه ليتناسب مع أوزان البلوكشين الحقيقية لعام 2026
  */
 
-import type { ReputationScores, ScoreBreakdown, WalletData, StakingData, MiningData } from './types';
+import type { ReputationScores, ScoreBreakdown, WalletData, StakingData, MiningData } from './types'; 
 import { analyzeAllTransactions } from './transactions';
 
 export function calculateReputationScore(

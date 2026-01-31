@@ -10,7 +10,7 @@
  * - Strict Demo mode separation
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node'; 
 import { Redis } from '@upstash/redis';
 
 const redis = new Redis({

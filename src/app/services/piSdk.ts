@@ -18,7 +18,9 @@ export function isPiBrowser(): boolean {
                  ua.includes('pi browser') || 
                  ua.includes('pinet') ||
                  ua.includes('pi network') ||
-                 ua.includes('pi_browser');
+                 ua.includes('pi_browser') ||
+                 ua.includes('webview') || 
+                 (window as any).Pi;
   
   if (isPiUA) {
     console.log('[PI SDK] Pi Browser detected via User-Agent');

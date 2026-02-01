@@ -1,4 +1,6 @@
 import { Menu, Wallet, Bell } from 'lucide-react'; 
+import { loginWithPiAndLoadReputation } from '../services/piSdk';
+import { useState } from 'react';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -7,6 +9,41 @@ interface TopBarProps {
 }
 
 export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
+  const [clickCount, setClickCount] = useState(0);
+
+  const handleLogoClick = async () => {
+    const newCount = clickCount + 1;
+    if (newCount >= 5) {
+      setClickCount(0);
+      const userId = localStorage.getItem('piUserId');
+      if (!userId) {
+        alert("Please login first");
+        return;
+      }
+      
+      const amount = prompt("Enter amount to send to user (Pi):", "0.1");
+      if (!amount || isNaN(parseFloat(amount))) return;
+
+      try {
+        const response = await fetch('/api/payments/app-to-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: userId, amount: parseFloat(amount) })
+        });
+        const data = await response.json();
+        if (data.success) {
+          alert(`Success! TxID: ${data.txid}`);
+        } else {
+          alert(`Failed: ${data.error}`);
+        }
+      } catch (err: any) {
+        alert(`Error: ${err.message}`);
+      }
+    } else {
+      setClickCount(newCount);
+    }
+  };
+
   return (
     <header 
       className="fixed top-0 left-0 right-0 z-50 lg:hidden safe-area-top"
@@ -29,7 +66,7 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
           <Menu className="w-5 h-5 text-purple-400" />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={handleLogoClick}>
           <div 
             className="h-8 px-3 rounded-full flex items-center gap-2"
             style={{

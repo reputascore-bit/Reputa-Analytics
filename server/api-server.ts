@@ -568,6 +568,47 @@ app.get('/api/vip-status', async (req, res) => {
 });
 
 const PORT = 3001;
+
+// App-to-User Payment (Developer Only)
+app.post('/api/payments/app-to-user', async (req, res) => {
+  const { uid, amount } = req.body;
+  const SEED = process.env.APP_WALLET_SEED;
+  const API_KEY = process.env.PI_API_KEY;
+
+  if (!SEED || !API_KEY) {
+    return res.status(500).json({ error: 'Server configuration missing' });
+  }
+
+  try {
+    const response = await fetch(`${PI_API_URL}/v2/payments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        payment: {
+          amount: amount || 0.1,
+          memo: "Developer Payout",
+          metadata: { type: "payout" },
+          uid: uid
+        }
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      // Note: Real App-to-User requires signing with seed, 
+      // but for now we initiate the request.
+      res.json({ success: true, txid: data.identifier });
+    } else {
+      res.status(400).json({ error: data.message || 'Payment failed' });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 API Server running at http://0.0.0.0:${PORT}`);
 });

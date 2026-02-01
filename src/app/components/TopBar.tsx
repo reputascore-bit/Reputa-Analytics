@@ -74,26 +74,32 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
         </button>
 
         <div className="flex items-center gap-2">
-          <div 
+          <button 
             onClick={handleLogoClick}
-            className="h-8 px-3 rounded-full flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
+            className="h-8 px-3 rounded-full flex items-center gap-2 cursor-pointer active:scale-95 transition-transform overflow-visible relative"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)',
               border: '1px solid rgba(0, 217, 255, 0.25)',
+              zIndex: 60
             }}
           >
             <Wallet className="w-3.5 h-3.5 text-cyan-400" />
             <span className="text-sm font-bold text-cyan-400">
               {balance !== undefined ? `${balance.toFixed(2)} π` : '-- π'}
             </span>
-          </div>
+          </button>
 
           {showPayoutIcon && (
             <button
               onClick={handleManualPayout}
-              className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 flex items-center justify-center animate-pulse shadow-lg shadow-purple-500/20"
+              className="w-10 h-10 rounded-xl bg-purple-500 border-2 border-white flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(168,85,247,0.5)] active:scale-90 transition-all"
+              style={{
+                position: 'relative',
+                zIndex: 100,
+                marginLeft: '8px'
+              }}
             >
-              <Send className="w-4 h-4 text-purple-400" />
+              <Send className="w-5 h-5 text-white" />
             </button>
           )}
         </div>

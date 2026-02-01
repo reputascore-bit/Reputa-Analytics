@@ -18,6 +18,7 @@ import { TopWalletsWidget } from '../components/widgets';
 import { NetworkInfoPage } from './NetworkInfoPage';
 import { TopWalletsPage } from './TopWalletsPage';
 import { ReputationPage } from './ReputationPage';
+import { ProfilePage } from './ProfilePage';
 import { DailyCheckIn } from '../components/DailyCheckIn';
 import { PointsExplainer } from '../components/PointsExplainer';
 import { ShareReputaCard } from '../components/ShareReputaCard';
@@ -113,6 +114,16 @@ export function UnifiedDashboard({
     loadUnifiedScore();
   }, [mode.mode, username]);
 
+  const profilePageData = useMemo(() => ({
+    walletData,
+    username: username || 'Pioneer',
+    isProUser,
+    mode,
+    userPoints,
+    onPointsEarned: handlePointsEarned,
+    onBack: () => setActiveSection('overview')
+  }), [walletData, username, isProUser, mode, userPoints]);
+
   const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
     const unified = reputationService.getUnifiedScore();
     setUnifiedScoreData(unified);
@@ -149,12 +160,12 @@ export function UnifiedDashboard({
       demoData.accountAgeDays = walletData.accountAge || 180;
       demoData.internalTxCount = walletData.transactions?.length || 25;
       demoData.dailyCheckins = unifiedScoreData.totalCheckInDays;
-      demoData.adBonuses = Math.floor(unifiedScoreData.activityPoints / 5);
+      demoData.adBonuses = Math.floor((unifiedScoreData.dailyCheckInPoints || 0) / 5);
       const result = calculateAtomicReputation(demoData);
       result.interaction.dailyCheckins = unifiedScoreData.totalCheckInDays;
       result.interaction.totalPoints = unifiedScoreData.totalScore;
       result.adjustedScore = unifiedScoreData.totalScore;
-      result.rawScore = unifiedScoreData.blockchainScore + unifiedScoreData.checkInPoints;
+      result.rawScore = (unifiedScoreData.blockchainScore || 0) + (unifiedScoreData.dailyCheckInPoints || 0);
       return result;
     }
     const demoData = generateDemoActivityData();

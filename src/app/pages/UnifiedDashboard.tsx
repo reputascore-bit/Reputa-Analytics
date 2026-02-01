@@ -333,13 +333,6 @@ export function UnifiedDashboard({
             maxPoints={getBackendScoreCap()}
             isVip={isProUser}
             onShare={() => setShowShareCard(true)}
-            network={mode.mode === 'mainnet' ? 'Pi Mainnet' : mode.mode === 'testnet' ? 'Pi Testnet' : 'Demo Mode'}
-            snapshot={{
-              txs: walletData.transactions?.length || 0,
-              days: walletData.accountAge || 0,
-              recv: walletData.transactions?.filter(tx => tx.type === 'received').length || 0,
-              sent: walletData.transactions?.filter(tx => tx.type === 'sent').length || 0
-            }}
           />
         </div>
 

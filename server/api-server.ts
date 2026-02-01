@@ -343,6 +343,230 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Pi Network Payment API - VIP payments and verification
+const PI_API_KEY = process.env.PI_API_KEY || '';
+const PI_API_URL = 'https://api.minepi.com';
+
+interface PaymentRecord {
+  paymentId: string;
+  uid: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'completed' | 'cancelled';
+  txid?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+async function getPaymentRecord(paymentId: string): Promise<PaymentRecord | null> {
+  try {
+    const data = await redis.get<PaymentRecord>(`payment:${paymentId}`);
+    return data;
+  } catch (error) {
+    console.error('[PAYMENT] Redis get error:', error);
+    return null;
+  }
+}
+
+async function savePaymentRecord(record: PaymentRecord): Promise<boolean> {
+  try {
+    record.updatedAt = new Date().toISOString();
+    await redis.set(`payment:${record.paymentId}`, JSON.stringify(record), { ex: 86400 * 30 });
+    return true;
+  } catch (error) {
+    console.error('[PAYMENT] Redis set error:', error);
+    return false;
+  }
+}
+
+async function approvePaymentOnPiNetwork(paymentId: string): Promise<boolean> {
+  if (!PI_API_KEY) {
+    console.warn('[PAYMENT] No PI_API_KEY configured, skipping server approval');
+    return true;
+  }
+  
+  try {
+    const response = await fetch(`${PI_API_URL}/v2/payments/${paymentId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${PI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      console.log('[PAYMENT] Approved on Pi Network:', paymentId);
+      return true;
+    } else {
+      const errorData = await response.text();
+      console.error('[PAYMENT] Pi Network approval failed:', response.status, errorData);
+      return false;
+    }
+  } catch (error) {
+    console.error('[PAYMENT] Pi Network approval error:', error);
+    return false;
+  }
+}
+
+async function completePaymentOnPiNetwork(paymentId: string, txid: string): Promise<boolean> {
+  if (!PI_API_KEY) {
+    console.warn('[PAYMENT] No PI_API_KEY configured, skipping server completion');
+    return true;
+  }
+  
+  try {
+    const response = await fetch(`${PI_API_URL}/v2/payments/${paymentId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${PI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ txid }),
+    });
+    
+    if (response.ok) {
+      console.log('[PAYMENT] Completed on Pi Network:', paymentId, 'TxID:', txid);
+      return true;
+    } else {
+      const errorData = await response.text();
+      console.error('[PAYMENT] Pi Network completion failed:', response.status, errorData);
+      return false;
+    }
+  } catch (error) {
+    console.error('[PAYMENT] Pi Network completion error:', error);
+    return false;
+  }
+}
+
+async function grantVIPAccess(uid: string): Promise<boolean> {
+  try {
+    const vipData = {
+      uid,
+      active: true,
+      grantedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    await redis.set(`vip:${uid}`, JSON.stringify(vipData), { ex: 86400 * 31 });
+    console.log('[VIP] Access granted to:', uid);
+    return true;
+  } catch (error) {
+    console.error('[VIP] Grant error:', error);
+    return false;
+  }
+}
+
+app.post('/api/payments', async (req, res) => {
+  const { action, paymentId, uid, txid, amount } = req.body;
+  
+  console.log('[PAYMENT] Request:', { action, paymentId, uid, txid });
+
+  if (action === 'approve') {
+    if (!paymentId || !uid) {
+      return res.status(400).json({ error: 'Missing paymentId or uid' });
+    }
+
+    const record: PaymentRecord = {
+      paymentId,
+      uid,
+      amount: amount || 1,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    
+    await savePaymentRecord(record);
+    
+    const approved = await approvePaymentOnPiNetwork(paymentId);
+    
+    if (approved) {
+      record.status = 'approved';
+      await savePaymentRecord(record);
+      console.log('[PAYMENT] Approved:', paymentId, 'for user:', uid);
+      return res.json({ success: true, message: 'Payment approved' });
+    } else {
+      return res.status(500).json({ error: 'Failed to approve payment on Pi Network' });
+    }
+  }
+
+  if (action === 'complete') {
+    if (!paymentId || !txid) {
+      return res.status(400).json({ error: 'Missing paymentId or txid' });
+    }
+
+    let record = await getPaymentRecord(paymentId);
+    
+    if (!record) {
+      record = {
+        paymentId,
+        uid: uid || 'unknown',
+        amount: 1,
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    
+    const completed = await completePaymentOnPiNetwork(paymentId, txid);
+    
+    if (completed) {
+      record.status = 'completed';
+      record.txid = txid;
+      await savePaymentRecord(record);
+      
+      if (record.uid && record.uid !== 'unknown') {
+        await grantVIPAccess(record.uid);
+      }
+      
+      console.log('[PAYMENT] Completed:', paymentId, 'TxID:', txid);
+      return res.json({ success: true, message: 'Payment completed', txid });
+    } else {
+      return res.status(500).json({ error: 'Failed to complete payment on Pi Network' });
+    }
+  }
+
+  if (action === 'cancel') {
+    if (!paymentId) {
+      return res.status(400).json({ error: 'Missing paymentId' });
+    }
+    
+    const record = await getPaymentRecord(paymentId);
+    if (record) {
+      record.status = 'cancelled';
+      await savePaymentRecord(record);
+    }
+    
+    console.log('[PAYMENT] Cancelled:', paymentId);
+    return res.json({ success: true, message: 'Payment cancelled' });
+  }
+
+  return res.status(400).json({ error: 'Invalid action' });
+});
+
+app.get('/api/vip-status', async (req, res) => {
+  const { uid } = req.query as { uid?: string };
+  
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+  
+  try {
+    const vipData = await redis.get<{ active: boolean; expiresAt: string }>(`vip:${uid}`);
+    
+    if (vipData && vipData.active) {
+      const isValid = new Date(vipData.expiresAt) > new Date();
+      return res.json({ 
+        success: true, 
+        isVIP: isValid, 
+        expiresAt: vipData.expiresAt 
+      });
+    }
+    
+    return res.json({ success: true, isVIP: false });
+  } catch (error) {
+    console.error('[VIP] Status check error:', error);
+    return res.json({ success: true, isVIP: false });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 API Server running at http://0.0.0.0:${PORT}`);

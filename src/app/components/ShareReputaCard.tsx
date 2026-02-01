@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';  
-import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image } from 'lucide-react';
+import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle } from 'lucide-react';
 
 interface ShareReputaCardProps {
   username: string;
@@ -233,6 +233,13 @@ Check yours at: reputa-score.vercel.app`;
   const [shareSuccess, setShareSuccess] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
 
+  const isPiBrowserEnv = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = navigator.userAgent.toLowerCase();
+    return ua.includes('pibrowser') || ua.includes('pi browser') || 
+           ua.includes('pinet') || ua.includes('pi network') || ua.includes('pi_browser');
+  };
+
   const handleShareImage = async () => {
     setIsGenerating(true);
     setShareError(null);
@@ -244,11 +251,73 @@ Check yours at: reputa-score.vercel.app`;
       }
 
       const file = new File([imageBlob], 'reputa-score.png', { type: 'image/png' });
-
+      const isPiBrowser = isPiBrowserEnv();
       let shared = false;
       
+      console.log('[Share] Starting share flow, isPiBrowser:', isPiBrowser);
+
+      // For Pi Browser, prioritize download + clipboard since Web Share API may be limited
+      if (isPiBrowser) {
+        console.log('[Share] Pi Browser detected - using download + clipboard approach');
+        
+        // Convert to data URL for reliable download in Pi Browser
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const dataUrl = reader.result as string;
+          
+          // Create a visible download prompt instead of auto-click
+          const downloadLink = document.createElement('a');
+          downloadLink.href = dataUrl;
+          downloadLink.download = `reputa-score-${username}.png`;
+          downloadLink.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;padding:20px;background:#8B5CF6;color:white;border-radius:12px;font-weight:bold;text-decoration:none;box-shadow:0 10px 40px rgba(139,92,246,0.5);';
+          downloadLink.textContent = 'Tap to Save Image';
+          document.body.appendChild(downloadLink);
+          
+          // Auto-click for immediate download
+          downloadLink.click();
+          
+          // Remove after short delay
+          setTimeout(() => {
+            if (downloadLink.parentNode) {
+              downloadLink.parentNode.removeChild(downloadLink);
+            }
+          }, 100);
+          
+          // Copy share text to clipboard
+          try {
+            await navigator.clipboard.writeText(shareText);
+            console.log('[Share] Text copied to clipboard');
+          } catch (clipErr) {
+            console.log('[Share] Clipboard copy failed:', clipErr);
+            // Fallback: create a temporary textarea
+            const textArea = document.createElement('textarea');
+            textArea.value = shareText;
+            textArea.style.cssText = 'position:fixed;opacity:0;';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+              document.execCommand('copy');
+            } catch (e) {}
+            document.body.removeChild(textArea);
+          }
+          
+          setShareSuccess(true);
+          setIsGenerating(false);
+          setTimeout(() => setShareSuccess(false), 3000);
+        };
+        reader.onerror = () => {
+          console.error('[Share] Failed to read image as data URL');
+          setShareError('Failed to prepare image');
+          setIsGenerating(false);
+        };
+        reader.readAsDataURL(imageBlob);
+        return;
+      }
+
+      // Standard browser - try Web Share API with file
       try {
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          console.log('[Share] Using Web Share API with file');
           await navigator.share({
             title: 'My Reputa Score',
             text: shareText,
@@ -259,16 +328,18 @@ Check yours at: reputa-score.vercel.app`;
           setTimeout(() => setShareSuccess(false), 3000);
         }
       } catch (fileShareError: any) {
-        if ((fileShareError as any).name === 'AbortError') {
+        if (fileShareError.name === 'AbortError') {
           shared = true;
         } else {
-          console.log('[Share] File sharing not supported, trying text share');
+          console.log('[Share] File sharing not supported:', fileShareError.message);
         }
       }
 
+      // Fallback to text-only share
       if (!shared) {
         try {
           if (navigator.share) {
+            console.log('[Share] Falling back to text-only share');
             await navigator.share({
               title: 'My Reputa Score',
               text: shareText,
@@ -282,18 +353,17 @@ Check yours at: reputa-score.vercel.app`;
           if (textShareError.name === 'AbortError') {
             shared = true;
           } else {
-            console.log('[Share] Text sharing failed, falling back to download');
+            console.log('[Share] Text sharing failed:', textShareError.message);
           }
         }
       }
 
+      // Final fallback - download
       if (!shared) {
-        // Use Data URL instead of Blob URL for better Pi Browser compatibility
+        console.log('[Share] Final fallback - download');
         const reader = new FileReader();
         reader.onloadend = async () => {
           const dataUrl = reader.result as string;
-          
-          // Create download link with data URL
           const a = document.createElement('a');
           a.href = dataUrl;
           a.download = `reputa-score-${username}.png`;
@@ -302,22 +372,21 @@ Check yours at: reputa-score.vercel.app`;
           a.click();
           document.body.removeChild(a);
           
-          // Also copy text to clipboard
           try {
             await navigator.clipboard.writeText(shareText);
           } catch (clipErr) {
-            console.log('Clipboard copy failed, but download succeeded');
+            console.log('[Share] Clipboard fallback failed');
           }
           
           setShareSuccess(true);
           setTimeout(() => setShareSuccess(false), 3000);
         };
         reader.readAsDataURL(imageBlob);
-        return; // Exit early since we're handling async
+        return;
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('Share failed:', error);
+        console.error('[Share] Error:', error);
         setShareError('Share failed. Try Copy or Save instead.');
         setTimeout(() => setShareError(null), 3000);
         await handleCopy();
@@ -332,32 +401,104 @@ Check yours at: reputa-score.vercel.app`;
     try {
       const imageBlob = await generateCardImage();
       if (imageBlob) {
-        // Use Data URL for better compatibility with Pi Browser
         const reader = new FileReader();
         reader.onloadend = () => {
           const dataUrl = reader.result as string;
-          const a = document.createElement('a');
-          a.href = dataUrl;
-          a.download = `reputa-score-${username}.png`;
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          const isPiBrowser = isPiBrowserEnv();
+          
+          if (isPiBrowser) {
+            // For Pi Browser, open in new tab/window for easier saving
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Reputa Score - ${username}</title>
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <style>
+                    body { 
+                      margin: 0; 
+                      padding: 20px; 
+                      background: #0F0A1F; 
+                      display: flex; 
+                      flex-direction: column; 
+                      align-items: center; 
+                      justify-content: center; 
+                      min-height: 100vh; 
+                      font-family: system-ui, sans-serif;
+                    }
+                    img { 
+                      max-width: 100%; 
+                      border-radius: 16px; 
+                      box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3); 
+                    }
+                    p { 
+                      color: rgba(255,255,255,0.7); 
+                      text-align: center; 
+                      margin-top: 20px; 
+                      font-size: 14px; 
+                    }
+                  </style>
+                </head>
+                <body>
+                  <img src="${dataUrl}" alt="Reputa Score"/>
+                  <p>Long press the image to save</p>
+                </body>
+                </html>
+              `);
+              newWindow.document.close();
+            }
+          } else {
+            // Standard browser download
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `reputa-score-${username}.png`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+          
           setIsGenerating(false);
           setShareSuccess(true);
           setTimeout(() => setShareSuccess(false), 3000);
         };
         reader.onerror = () => {
-          console.error('Failed to convert image to data URL');
+          console.error('[Download] Failed to convert image to data URL');
           setIsGenerating(false);
+          setShareError('Download failed. Please try again.');
+          setTimeout(() => setShareError(null), 3000);
         };
         reader.readAsDataURL(imageBlob);
-        return; // Exit early for async handling
+        return;
       }
     } catch (error) {
-      console.error('Download failed:', error);
+      console.error('[Download] Error:', error);
+      setShareError('Download failed');
+      setTimeout(() => setShareError(null), 3000);
     }
     setIsGenerating(false);
+  };
+
+  const handleSocialShare = (platform: 'twitter' | 'telegram' | 'whatsapp') => {
+    const encodedText = encodeURIComponent(shareText);
+    const encodedUrl = encodeURIComponent('https://reputa-score.vercel.app');
+    
+    let shareUrl = '';
+    switch (platform) {
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
+        break;
+    }
+    
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -541,6 +682,52 @@ Check yours at: reputa-score.vercel.app`;
             {shareSuccess ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
             <span className="text-xs">{shareSuccess ? 'Done!' : 'Share'}</span>
           </button>
+        </div>
+
+        <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <p className="text-xs text-center mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            Share on social media
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => handleSocialShare('twitter')}
+              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              style={{
+                background: 'rgba(29, 155, 240, 0.15)',
+                border: '1px solid rgba(29, 155, 240, 0.3)',
+                color: '#1DA1F2',
+              }}
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+              </svg>
+              <span className="text-xs">X</span>
+            </button>
+            <button
+              onClick={() => handleSocialShare('telegram')}
+              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              style={{
+                background: 'rgba(0, 136, 204, 0.15)',
+                border: '1px solid rgba(0, 136, 204, 0.3)',
+                color: '#0088CC',
+              }}
+            >
+              <Send className="w-4 h-4" />
+              <span className="text-xs">TG</span>
+            </button>
+            <button
+              onClick={() => handleSocialShare('whatsapp')}
+              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              style={{
+                background: 'rgba(37, 211, 102, 0.15)',
+                border: '1px solid rgba(37, 211, 102, 0.3)',
+                color: '#25D366',
+              }}
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="text-xs">WA</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

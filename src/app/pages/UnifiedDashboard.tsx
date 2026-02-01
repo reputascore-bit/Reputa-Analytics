@@ -78,7 +78,19 @@ export function UnifiedDashboard({
     return { mode: 'testnet', connected: true };
   });
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const activeSectionLabel = useMemo(() => {
+    const sectionLabels: Record<string, string> = {
+      'overview': 'Reputa Score',
+      'analytics': 'Analytics',
+      'transactions': 'Activity',
+      'audit': 'Audit Report',
+      'portfolio': 'Portfolio',
+      'wallet': 'Wallet',
+      'network': 'Network',
+      'settings': 'Settings'
+    };
+    return sectionLabels[activeSection] || activeSection;
+  }, [activeSection]);
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
@@ -114,16 +126,6 @@ export function UnifiedDashboard({
     loadUnifiedScore();
   }, [mode.mode, username]);
 
-  const profilePageData = useMemo(() => ({
-    walletData,
-    username: username || 'Pioneer',
-    isProUser,
-    mode,
-    userPoints,
-    onPointsEarned: handlePointsEarned,
-    onBack: () => setActiveSection('overview')
-  }), [walletData, username, isProUser, mode, userPoints]);
-
   const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
     const unified = reputationService.getUnifiedScore();
     setUnifiedScoreData(unified);
@@ -135,6 +137,16 @@ export function UnifiedDashboard({
       streak: unified.streak || 0,
     });
   };
+
+  const profilePageData = useMemo(() => ({
+    walletData,
+    username: username || 'Pioneer',
+    isProUser,
+    mode,
+    userPoints,
+    onPointsEarned: handlePointsEarned,
+    onBack: () => setActiveSection('overview')
+  }), [walletData, username, isProUser, mode, userPoints]);
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
   const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);

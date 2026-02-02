@@ -1,8 +1,9 @@
 import React from 'react';
-import { ArrowLeft, Mail, ShieldCheck, HelpCircle, FileText } from 'lucide-react';
+import { ArrowLeft, Globe } from 'lucide-react';
 import { ProfileSection } from '../components/ProfileSection';
 import { WalletData, AppMode } from '../protocol/types';
 import { WalletActivityData } from '../services/piNetworkData';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface ProfilePageProps {
   walletData: WalletData;
@@ -31,6 +32,12 @@ export function ProfilePage({
   activityData,
   onBack
 }: ProfilePageProps) {
+  const { language, setLanguage } = useLanguage();
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'ar' : 'en');
+  };
+
   return (
     <div className="min-h-screen futuristic-bg pb-20 lg:pb-6">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
@@ -46,6 +53,14 @@ export function ProfilePage({
           </button>
           <h1 className="text-lg font-bold text-white uppercase tracking-widest">Profile</h1>
         </div>
+
+        <button 
+          onClick={toggleLanguage}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95"
+        >
+          <Globe className="w-4 h-4 text-purple-400" />
+          <span className="text-[10px] font-black text-white uppercase">{language === 'en' ? 'AR' : 'EN'}</span>
+        </button>
       </header>
 
       <main className="container mx-auto max-w-2xl px-4 py-6 relative z-10">

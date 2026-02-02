@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'; 
-import { User, Wallet, Activity, Calendar, Award, Star, TrendingUp, Shield, Zap, Target, Mail, ShieldCheck, HelpCircle, FileText } from 'lucide-react';
+import { User, Wallet, Activity, Calendar, Award, Star, TrendingUp, Shield, Zap, Target, Mail, ShieldCheck, HelpCircle, FileText, Globe } from 'lucide-react';
 import { WalletData, AppMode } from '../protocol/types';
 import { 
   calculateAtomicReputation, 
@@ -203,27 +203,45 @@ export function ProfileSection({
         </div>
       </div>
 
-      {/* Secondary Actions / Support */}
-      <div className="flex justify-center items-center gap-6 py-2">
-        <button className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-          <ShieldCheck className="w-4 h-4 text-gray-400" />
-          <span className="text-[8px] font-bold text-gray-500 uppercase">Privacy</span>
-        </button>
-        <button className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-          <FileText className="w-4 h-4 text-gray-400" />
-          <span className="text-[8px] font-bold text-gray-500 uppercase">Terms</span>
-        </button>
-        <button className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
-          <HelpCircle className="w-4 h-4 text-gray-400" />
-          <span className="text-[8px] font-bold text-gray-500 uppercase">Help</span>
-        </button>
-        <a 
-          href="mailto:reputa.score@gmail.com" 
-          className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity"
+      {/* Account Overview (Mini Section) */}
+      <div className="grid grid-cols-2 gap-4">
+        <div 
+          className="rounded-2xl p-4 bg-white/5 border border-white/10"
         >
-          <Mail className="w-4 h-4 text-red-400" />
-          <span className="text-[8px] font-bold text-gray-500 uppercase">Support</span>
-        </a>
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="w-3 h-3 text-cyan-400" />
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{isRTL ? 'نظرة عامة' : 'Account Overview'}</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase">{isRTL ? 'عمر الحساب' : 'Account Age'}</span>
+              <span className="text-[10px] text-white font-mono">{walletData.accountAge || 0}d</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase">{isRTL ? 'إجمالي النقاط' : 'Total Points'}</span>
+              <span className="text-[10px] text-cyan-400 font-mono">{(levelProgress.displayScore).toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div 
+          className="rounded-2xl p-4 bg-white/5 border border-white/10"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-3 h-3 text-emerald-400" />
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{isRTL ? 'ملخص السمعة' : 'Reputation Summary'}</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase">{isRTL ? 'المستوى' : 'Level'}</span>
+              <span className="text-[10px] text-emerald-400 font-bold">Lv.{levelProgress.levelIndex + 1}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[8px] text-gray-500 font-bold uppercase">{isRTL ? 'الحالة' : 'Status'}</span>
+              <span className="text-[10px] text-emerald-400 font-bold uppercase">{isRTL ? levelName.ar : levelName.en}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Check In Component */}
@@ -251,6 +269,29 @@ export function ProfileSection({
           <ScoreRow label={isRTL ? 'Pi Dex' : 'DEX Activity'} value={atomicResult.piDex.totalPoints} max={200} />
           <ScoreRow label={isRTL ? 'Staking' : 'Trust Staking'} value={atomicResult.staking.totalPoints} max={100} />
         </div>
+      </div>
+
+      {/* Simplified Footer Icons */}
+      <div className="flex justify-center items-center gap-8 py-6">
+        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+          <ShieldCheck className="w-5 h-5 text-gray-400" />
+          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Privacy</span>
+        </button>
+        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+          <FileText className="w-5 h-5 text-gray-400" />
+          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Terms</span>
+        </button>
+        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
+          <HelpCircle className="w-5 h-5 text-gray-400" />
+          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Help</span>
+        </button>
+        <a 
+          href="mailto:reputa.score@gmail.com" 
+          className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity"
+        >
+          <Mail className="w-5 h-5 text-red-400" />
+          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Support</span>
+        </a>
       </div>
     </div>
   );

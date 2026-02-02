@@ -515,32 +515,32 @@ function ReputaAppContent() {
               <Share2 className="w-4 h-4" style={{ color: '#8B5CF6' }} />
             </button>
           )}
-          <a 
-            href="https://t.me/+zxYP2x_4IWljOGM0" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="p-2 sm:p-2.5 rounded-xl transition-all"
-            style={{
-              background: 'rgba(34, 158, 217, 0.15)',
-              border: '1px solid rgba(34, 158, 217, 0.3)',
-            }}
-            title="Telegram"
-          >
-            <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
-          </a>
-          <a 
-            href="mailto:reputa.score@gmail.com" 
-            className="p-2 sm:p-2.5 rounded-xl transition-all"
-            style={{
-              background: 'rgba(234, 67, 53, 0.15)',
-              border: '1px solid rgba(234, 67, 53, 0.3)',
-            }}
-            title="Gmail"
-          >
-            <Mail className="w-4 h-4" style={{ color: '#EA4335' }} />
-          </a>
-        </div>
-      </header>
+            <a 
+              href="https://t.me/+zxYP2x_4IWljOGM0" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="p-2 sm:p-2.5 rounded-xl transition-all"
+              style={{
+                background: 'rgba(34, 158, 217, 0.15)',
+                border: '1px solid rgba(34, 158, 217, 0.3)',
+              }}
+              title="Telegram"
+            >
+              <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
+            </a>
+            <a 
+              href="mailto:reputa.score@gmail.com" 
+              className="p-2 sm:p-2.5 rounded-xl transition-all"
+              style={{
+                background: 'rgba(234, 67, 53, 0.15)',
+                border: '1px solid rgba(234, 67, 53, 0.3)',
+              }}
+              title="Gmail"
+            >
+              <Mail className="w-4 h-4" style={{ color: '#EA4335' }} />
+            </a>
+          </div>
+        </header>
 
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-12 flex-1 relative z-10">
         {isLoading ? (

@@ -94,6 +94,7 @@ export function UnifiedDashboard({
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [unifiedScoreData, setUnifiedScoreData] = useState<UnifiedScoreData | null>(null);
   const [userPoints, setUserPoints] = useState({
     total: walletData.reputaScore || 0,

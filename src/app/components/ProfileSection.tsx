@@ -272,25 +272,42 @@ export function ProfileSection({
       </div>
 
       {/* Simplified Footer Icons */}
-      <div className="flex justify-center items-center gap-8 py-6">
-        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-          <ShieldCheck className="w-5 h-5 text-gray-400" />
-          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Privacy</span>
+      <div className="flex justify-center items-center gap-10 py-8">
+        <button 
+          onClick={() => window.open('/privacy', '_blank')}
+          className="flex flex-col items-center gap-2 group transition-all"
+        >
+          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-purple-500/10 group-hover:border-purple-500/30 transition-all">
+            <ShieldCheck className="w-6 h-6 text-gray-400 group-hover:text-purple-400" />
+          </div>
+          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-purple-400">Privacy</span>
         </button>
-        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-          <FileText className="w-5 h-5 text-gray-400" />
-          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Terms</span>
+        <button 
+          onClick={() => window.open('/terms', '_blank')}
+          className="flex flex-col items-center gap-2 group transition-all"
+        >
+          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">
+            <FileText className="w-6 h-6 text-gray-400 group-hover:text-blue-400" />
+          </div>
+          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-blue-400">Terms</span>
         </button>
-        <button className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-          <HelpCircle className="w-5 h-5 text-gray-400" />
-          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Help</span>
+        <button 
+          onClick={() => window.open('/help', '_blank')}
+          className="flex flex-col items-center gap-2 group transition-all"
+        >
+          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-cyan-500/10 group-hover:border-cyan-500/30 transition-all">
+            <HelpCircle className="w-6 h-6 text-gray-400 group-hover:text-cyan-400" />
+          </div>
+          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-cyan-400">Help</span>
         </button>
         <a 
           href="mailto:reputa.score@gmail.com" 
-          className="flex flex-col items-center gap-1.5 opacity-60 hover:opacity-100 transition-opacity"
+          className="flex flex-col items-center gap-2 group transition-all"
         >
-          <Mail className="w-5 h-5 text-red-400" />
-          <span className="text-[7px] font-black text-gray-500 uppercase tracking-widest">Support</span>
+          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-red-500/10 group-hover:border-red-500/30 transition-all">
+            <Mail className="w-6 h-6 text-gray-400 group-hover:text-red-400" />
+          </div>
+          <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-red-400">Support</span>
         </a>
       </div>
     </div>

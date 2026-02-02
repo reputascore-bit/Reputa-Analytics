@@ -32,10 +32,10 @@ export function ProfilePage({
   activityData,
   onBack
 }: ProfilePageProps) {
-  const { language, setLanguage } = useLanguage();
+  const { language, changeLanguage } = useLanguage();
 
   const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'ar' : 'en');
+    changeLanguage(language === 'en' ? 'ar' : 'en');
   };
 
   return (

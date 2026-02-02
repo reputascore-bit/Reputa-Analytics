@@ -804,35 +804,6 @@ export function UnifiedDashboard({
               onPointsEarned={handlePointsEarned}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button 
-                onClick={() => setActiveSection('privacy')}
-                className="p-4 rounded-xl glass-card border border-white/5 hover:border-purple-500/40 transition-all flex flex-col items-center gap-2 group"
-              >
-                <div className="p-3 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-all">
-                  <Lock className="w-5 h-5 text-purple-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-white">Privacy Policy</span>
-              </button>
-              <button 
-                onClick={() => setActiveSection('terms')}
-                className="p-4 rounded-xl glass-card border border-white/5 hover:border-cyan-500/40 transition-all flex flex-col items-center gap-2 group"
-              >
-                <div className="p-3 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 transition-all">
-                  <FileText className="w-5 h-5 text-cyan-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-white">Terms of Service</span>
-              </button>
-              <button 
-                onClick={() => setActiveSection('help')}
-                className="p-4 rounded-xl glass-card border border-white/5 hover:border-emerald-500/40 transition-all flex flex-col items-center gap-2 group"
-              >
-                <div className="p-3 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-all">
-                  <HelpCircle className="w-5 h-5 text-emerald-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-wider text-white">Help Center</span>
-              </button>
-            </div>
           </div>
         )}
 
@@ -970,54 +941,6 @@ export function UnifiedDashboard({
                     The score is based on transaction volume, account age, consistency of activity, and network trust factors. Higher scores indicate greater reliability.
                   </div>
                 </details>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeSection === 'privacy' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <Lock className="w-6 h-6 text-purple-400" />
-                <h2 className="text-lg font-black uppercase tracking-wide text-white">Privacy Policy</h2>
-              </div>
-              <div className="prose prose-invert max-w-none text-[11px] text-gray-400 space-y-4 font-sans leading-relaxed">
-                <p className="font-bold text-white mb-2">Last Updated: January 26, 2026</p>
-                <p>Reputa Score Protocol ("the Protocol", "we", or "us") is committed to protecting the privacy and security of our users. This Privacy Policy outlines our practices regarding the collection, use, and safeguarding of data within the Pi Network ecosystem.</p>
-                
-                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">1. Data Collection and Scope</h3>
-                <p>We operate on the principle of data minimization. The Protocol analyzes publicly available blockchain data to provide reputation scoring. The data processed includes Public Wallet Addresses, User Identifiers (UID), and Technical Metadata.</p>
-
-                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">2. Data Protection and Security</h3>
-                <p>The Protocol employs industry-standard encryption and security measures. We maintain a non-custodial architecture, meaning we never request, store, or have access to your private keys or passphrases.</p>
-
-                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">3. Third-Party Disclosure</h3>
-                <p>Reputa Score Protocol maintains a strict no-sale policy. We do not sell, trade, or rent user data to third parties. Data remains within the secure infrastructure of the Protocol.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeSection === 'terms' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <FileTextIcon className="w-6 h-6 text-cyan-400" />
-                <h2 className="text-lg font-black uppercase tracking-wide text-white">Terms of Service</h2>
-              </div>
-              <div className="prose prose-invert max-w-none text-[11px] text-gray-400 space-y-4 font-sans leading-relaxed">
-                <p className="font-bold text-white mb-2">Last Updated: January 26, 2026</p>
-                <p>By accessing or using the Reputa Score Protocol ("the Protocol"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.</p>
-
-                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">1. Nature of Service</h3>
-                <p>Reputa Score Protocol is an analytical tool designed to evaluate the reliability of digital wallets within the Pi Network based on publicly available blockchain data.</p>
-
-                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">2. VIP Subscriptions</h3>
-                <p>Advanced features, such as detailed audit reports, may require payment via the Pi Network. Payments for digital upgrades are final and non-refundable.</p>
-
-                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">3. Limitation of Liability</h3>
-                <p>Reputa Score Protocol assumes no responsibility for financial losses resulting from trading decisions or transactions made based on our scoring metrics.</p>
               </div>
             </div>
           </div>

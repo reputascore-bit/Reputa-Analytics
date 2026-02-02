@@ -375,7 +375,17 @@ function ReputaAppContent() {
 
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
-  if (window.location.pathname === '/admin-console') {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  if (currentPath === '/admin-console') {
     return <AdminConsole />;
   }
 

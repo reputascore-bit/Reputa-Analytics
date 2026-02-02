@@ -69,7 +69,8 @@ export function SideDrawer({
     { id: 'settings', icon: Settings, label: 'Settings' },
     { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
     { id: 'help', icon: HelpCircle, label: 'Help' },
-    { id: 'privacy', icon: Shield, label: 'Privacy' },
+    { id: 'privacy', icon: Shield, label: 'Privacy', onClick: () => window.open('https://reputa-score.vercel.app/privacy.html', '_blank') },
+    { id: 'terms', icon: FileText, label: 'Terms', onClick: () => window.open('https://reputa-score.vercel.app/terms.html', '_blank') },
   ];
 
   if (!isOpen && !isAnimating) return null;
@@ -174,7 +175,14 @@ export function SideDrawer({
                 {bottomItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => handleItemClick(item.id)}
+                    onClick={() => {
+                      if (item.onClick) {
+                        item.onClick();
+                        handleClose();
+                      } else {
+                        handleItemClick(item.id);
+                      }
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-all"
                   >
                     <item.icon className="w-4 h-4 text-gray-500" />

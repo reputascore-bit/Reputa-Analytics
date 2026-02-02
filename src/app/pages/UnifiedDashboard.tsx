@@ -59,7 +59,7 @@ interface UnifiedDashboardProps {
   username?: string;
 }
 
-type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'network' | 'profile' | 'settings' | 'feedback' | 'help' | 'privacy' | 'terms';
+type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'network' | 'profile' | 'settings' | 'feedback' | 'help';
 type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
@@ -243,8 +243,6 @@ export function UnifiedDashboard({
       'settings': 'settings',
       'feedback': 'feedback',
       'help': 'help',
-      'privacy': 'privacy',
-      'terms': 'terms',
     };
     setActiveSection(sectionMap[itemId] || 'overview');
   };

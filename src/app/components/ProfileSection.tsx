@@ -274,7 +274,7 @@ export function ProfileSection({
       {/* Simplified Footer Icons */}
       <div className="flex justify-center items-center gap-10 py-8">
         <button 
-          onClick={() => window.open('/privacy', '_blank')}
+          onClick={() => window.open('https://reputa-score.vercel.app/privacy.html', '_blank')}
           className="flex flex-col items-center gap-2 group transition-all"
         >
           <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-purple-500/10 group-hover:border-purple-500/30 transition-all">
@@ -283,7 +283,7 @@ export function ProfileSection({
           <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest group-hover:text-purple-400">Privacy</span>
         </button>
         <button 
-          onClick={() => window.open('/terms', '_blank')}
+          onClick={() => window.open('https://reputa-score.vercel.app/terms.html', '_blank')}
           className="flex flex-col items-center gap-2 group transition-all"
         >
           <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 transition-all">

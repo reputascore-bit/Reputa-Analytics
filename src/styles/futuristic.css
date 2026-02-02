@@ -46,11 +46,35 @@
   --glow-pink: var(--glow-primary);
 }
 
+html, body {
+  overflow-x: hidden;
+  overscroll-behavior-y: contain; /* Disable pull-to-refresh pull-down elastic effect */
+  -webkit-tap-highlight-color: transparent; /* Disable tap highlight on iOS */
+  user-select: none; /* Disable text selection for app feel */
+  -webkit-user-select: none;
+  touch-action: manipulation; /* Disable double-tap to zoom */
+  cursor: default;
+}
+
+/* Re-enable selection for inputs and textareas */
+input, textarea {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* App-like active state feedback */
+button:active {
+  transform: scale(0.96) !important;
+  opacity: 0.8;
+  transition: transform 0.1s ease;
+}
+
 .futuristic-bg {
   background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, #0D0E14 100%);
   min-height: 100vh;
+  min-height: -webkit-fill-available;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .futuristic-bg::before {

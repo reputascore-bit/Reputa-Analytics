@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { MongoClient, Db, Collection } from 'mongodb';
+// import { MongoClient, Db, Collection } from 'mongodb';
 
 const router = Router();
 
@@ -12,13 +12,15 @@ const router = Router();
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/reputa';
 const DB_NAME = process.env.MONGODB_DB_NAME || 'reputa-analytics';
 
-let cachedDb: Db | null = null;
+let cachedDb: any = null;
 
-async function getDatabase(): Promise<Db> {
+async function getDatabase(): Promise<any> {
   if (cachedDb) return cachedDb;
 
   try {
-    const client = new MongoClient(MONGODB_URI);
+    // dynamic import so TypeScript/runtime don't fail when mongodb isn't available
+    const { MongoClient: MongoClientRef } = await import('mongodb');
+    const client = new (MongoClientRef as any)(MONGODB_URI);
     await client.connect();
     cachedDb = client.db(DB_NAME);
     console.log('✅ Connected to MongoDB for Unified Reputation API');

@@ -1,29 +1,29 @@
-import React, { useState, useEffect, useMemo } from 'react';  
+import React, { useState, useEffect, useMemo, Suspense } from 'react';  
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
 import { SideDrawer } from '../components/SideDrawer';
 import { TopBar } from '../components/TopBar';
 import { MainCard } from '../components/MainCard';
-import { TransactionTimeline } from '../components/charts/TransactionTimeline';
-import { PointsBreakdown } from '../components/charts/PointsBreakdown';
-import { RiskActivity } from '../components/charts/RiskActivity';
-import { TokenPortfolio } from '../components/charts/TokenPortfolio';
-import { ScoreBreakdownChart } from '../components/ScoreBreakdownChart';
-import { PiDexSection } from '../components/PiDexSection';
-import { TrustGauge } from '../components/TrustGauge';
-import { TransactionList } from '../components/TransactionList';
-import { AuditReport } from '../components/AuditReport';
-import { TopWalletsWidget } from '../components/widgets';
-import { NetworkInfoPage } from './NetworkInfoPage';
-import { TopWalletsPage } from './TopWalletsPage';
-import { ReputationPage } from './ReputationPage';
-import { ProfilePage } from './ProfilePage';
-import { DailyCheckIn } from '../components/DailyCheckIn';
-import { PointsExplainer } from '../components/PointsExplainer';
-import { ShareReputaCard } from '../components/ShareReputaCard';
-import { MiningDaysWidget } from '../components/MiningDaysWidget';
-import { ProfileSection } from '../components/ProfileSection';
+const TransactionTimeline = React.lazy(async () => ({ default: (await import('../components/charts/TransactionTimeline')).TransactionTimeline }));
+const PointsBreakdown = React.lazy(async () => ({ default: (await import('../components/charts/PointsBreakdown')).PointsBreakdown }));
+const RiskActivity = React.lazy(async () => ({ default: (await import('../components/charts/RiskActivity')).RiskActivity }));
+const TokenPortfolio = React.lazy(async () => ({ default: (await import('../components/charts/TokenPortfolio')).TokenPortfolio }));
+const ScoreBreakdownChart = React.lazy(async () => ({ default: (await import('../components/ScoreBreakdownChart')).ScoreBreakdownChart }));
+const PiDexSection = React.lazy(async () => ({ default: (await import('../components/PiDexSection')).PiDexSection }));
+const TrustGauge = React.lazy(async () => ({ default: (await import('../components/TrustGauge')).TrustGauge }));
+const TransactionList = React.lazy(async () => ({ default: (await import('../components/TransactionList')).TransactionList }));
+const AuditReport = React.lazy(async () => ({ default: (await import('../components/AuditReport')).AuditReport }));
+const TopWalletsWidget = React.lazy(async () => ({ default: (await import('../components/widgets')).TopWalletsWidget }));
+const NetworkInfoPage = React.lazy(async () => ({ default: (await import('./NetworkInfoPage')).NetworkInfoPage }));
+const TopWalletsPage = React.lazy(async () => ({ default: (await import('./TopWalletsPage')).TopWalletsPage }));
+const ReputationPage = React.lazy(async () => ({ default: (await import('./ReputationPage')).ReputationPage }));
+const ProfilePage = React.lazy(async () => ({ default: (await import('./ProfilePage')).ProfilePage }));
+const DailyCheckIn = React.lazy(async () => ({ default: (await import('../components/DailyCheckIn')).DailyCheckIn }));
+const PointsExplainer = React.lazy(async () => ({ default: (await import('../components/PointsExplainer')).PointsExplainer }));
+const ShareReputaCard = React.lazy(async () => ({ default: (await import('../components/ShareReputaCard')).ShareReputaCard }));
+const MiningDaysWidget = React.lazy(async () => ({ default: (await import('../components/MiningDaysWidget')).MiningDaysWidget }));
+const ProfileSection = React.lazy(async () => ({ default: (await import('../components/ProfileSection')).ProfileSection }));
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 
@@ -158,8 +158,16 @@ export function UnifiedDashboard({
 
   useEffect(() => {
     const { transactions, score: mockScore, tokens: mockTokens } = generateMockChartData();
-    
-    setTimelineData(processTransactionTimeline(transactions, period));
+    const mapPeriodToTimeline = (p: '7d' | '30d' | '90d' | 'all') => {
+      switch (p) {
+        case '7d': return 'day';
+        case '30d': return 'week';
+        case '90d': return 'month';
+        case 'all': default: return 'month';
+      }
+    };
+
+    setTimelineData(processTransactionTimeline(transactions, mapPeriodToTimeline(period)));
     setBreakdownData(processScoreBreakdown(mockScore));
     setRiskData(processRiskActivity(transactions, mockScore));
     setPortfolioData(processTokenPortfolio(mockTokens));
@@ -227,7 +235,8 @@ export function UnifiedDashboard({
   };
 
   const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
-    setPeriod(newPeriod);
+    const mapToState = (p: 'day' | 'week' | 'month') => p === 'day' ? '7d' : p === 'week' ? '30d' : '90d';
+    setPeriod(mapToState(newPeriod));
   };
 
   const handleSidebarNavigation = (itemId: string) => {
@@ -503,61 +512,69 @@ export function UnifiedDashboard({
                   View All →
                 </button>
               </div>
+            <Suspense fallback={<div className="py-6 text-center">Loading transactions...</div>}>
               <TransactionList 
-              transactions={walletData?.transactions?.slice(0, 4) || []} 
-              walletAddress={walletData?.address || ''} 
-            />
+                transactions={walletData?.transactions?.slice(0, 4) || []} 
+                walletAddress={walletData?.address || ''} 
+              />
+            </Suspense>
             </div>
           </div>
         )}
 
         {activeSection === 'analytics' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <TransactionTimeline 
-                  internal={timelineData.internal}
-                  external={timelineData.external}
-                  onFilterChange={handlePeriodChange}
-                />
+            <Suspense fallback={<div className="py-12 text-center">Loading analytics...</div>}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  <TransactionTimeline 
+                    internal={timelineData.internal}
+                    external={timelineData.external}
+                    onFilterChange={handlePeriodChange}
+                  />
+                </div>
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <PointsBreakdown data={breakdownData} />
+                </div>
               </div>
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                <PointsBreakdown data={breakdownData} />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                <RiskActivity data={riskData} />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(236, 72, 153, 0.2)' }}>
+                  <RiskActivity data={riskData} />
+                </div>
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  {score && <ScoreBreakdownChart score={score} />}
+                </div>
               </div>
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                {score && <ScoreBreakdownChart score={score} />}
-              </div>
-            </div>
+            </Suspense>
           </div>
         )}
 
         {activeSection === 'transactions' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-              <TransactionList 
-              transactions={walletData?.transactions || []} 
-              walletAddress={walletData?.address || ''} 
-            />
-            </div>
+            <Suspense fallback={<div className="py-12 text-center">Loading transactions...</div>}>
+              <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                <TransactionList 
+                  transactions={walletData?.transactions || []} 
+                  walletAddress={walletData?.address || ''} 
+                />
+              </div>
+            </Suspense>
           </div>
         )}
 
         {activeSection === 'audit' && (
           <div className="space-y-6 animate-in fade-in duration-300 relative">
-            <AuditReport 
-              walletData={{
-                ...walletData,
-                transactions: walletData?.transactions || []
-              }} 
-              isProUser={isProUser} 
-              onUpgradePrompt={onUpgradePrompt}
-            />
+            <Suspense fallback={<div className="py-12 text-center">Loading audit report...</div>}>
+              <AuditReport 
+                walletData={{
+                  ...walletData,
+                  transactions: walletData?.transactions || []
+                }} 
+                isProUser={isProUser} 
+                onUpgradePrompt={onUpgradePrompt}
+              />
+            </Suspense>
             
             {!isProUser && (
               <div className="absolute inset-x-0 bottom-0 h-[50%] z-20 flex flex-col items-center justify-end pointer-events-auto">
@@ -596,20 +613,22 @@ export function UnifiedDashboard({
 
         {activeSection === 'portfolio' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <TokenPortfolio data={portfolioData} />
+            <Suspense fallback={<div className="py-12 text-center">Loading portfolio...</div>}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <TokenPortfolio data={portfolioData} />
+                </div>
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <PiDexSection 
+                    walletAddress={walletData.address}
+                    balance={walletData.balance}
+                    totalSent={walletData.transactions?.filter(tx => tx.type === 'sent').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                    totalReceived={walletData.transactions?.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                    isMainnet={mode.mode !== 'testnet'}
+                  />
+                </div>
               </div>
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                <PiDexSection 
-                  walletAddress={walletData.address}
-                  balance={walletData.balance}
-                  totalSent={walletData.transactions?.filter(tx => tx.type === 'sent').reduce((sum, tx) => sum + tx.amount, 0) || 0}
-                  totalReceived={walletData.transactions?.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + tx.amount, 0) || 0}
-                  isMainnet={mode.mode !== 'testnet'}
-                />
-              </div>
-            </div>
+            </Suspense>
           </div>
         )}
 

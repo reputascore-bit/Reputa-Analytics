@@ -104,6 +104,10 @@ function ReputaAppContent() {
       const user = await loginWithPi();
       if (user && user.uid !== "demo") {
         setCurrentUser(user);
+        localStorage.setItem('piUserId', user.uid);
+        localStorage.setItem('piUsername', user.username);
+        if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
+        
         syncToAdmin(user.username, user.wallet_address || "Pending...");
         const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
         setIsVip(res.isVip);
@@ -211,8 +215,34 @@ function ReputaAppContent() {
       const detectedPiBrowser = await checkPiBrowser();
       setPiBrowser(detectedPiBrowser);
       
+      // Check for existing session in localStorage
+      const savedUserId = localStorage.getItem('piUserId');
+      const savedUsername = localStorage.getItem('piUsername');
+      const savedWallet = localStorage.getItem('piWalletAddress');
+
+      if (savedUserId && savedUsername && savedUserId !== 'demo') {
+        const user = { uid: savedUserId, username: savedUsername, wallet_address: savedWallet || undefined };
+        setCurrentUser(user);
+        
+        // Load VIP status for returning user
+        fetch(`/api/check-vip?uid=${user.uid}`)
+          .then(r => r.json())
+          .then(res => {
+            setIsVip(res.isVip);
+            setPaymentCount(res.count || 0);
+          })
+          .catch(() => null);
+          
+        // If we have a wallet, trigger check automatically
+        if (savedWallet) {
+          handleWalletCheck(savedWallet).catch(() => null);
+        }
+      }
+
       if (!detectedPiBrowser) {
-        setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
+        if (!savedUserId) {
+          setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
+        }
         setIsInitializing(false);
         return;
       }
@@ -220,13 +250,20 @@ function ReputaAppContent() {
       try {
         const initialized = await initializePiSDK();
         if (initialized) {
-          const user = await authenticateUser(['username', 'wallet_address', 'payments']);
-          if (user && user.uid) {
-            setCurrentUser(user);
-            syncToAdmin(user.username, user.wallet_address || "Pending...");
-            const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
-            setIsVip(res.isVip);
-            setPaymentCount(res.count || 0);
+          // If no saved user or we want to ensure fresh session
+          if (!savedUserId || savedUserId === 'demo') {
+            const user = await authenticateUser(['username', 'wallet_address', 'payments']);
+            if (user && user.uid) {
+              setCurrentUser(user);
+              localStorage.setItem('piUserId', user.uid);
+              localStorage.setItem('piUsername', user.username);
+              if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
+              
+              syncToAdmin(user.username, user.wallet_address || "Pending...");
+              const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+              setIsVip(res.isVip);
+              setPaymentCount(res.count || 0);
+            }
           }
         }
       } catch (e: any) { console.error('Auth failed', e); } finally { setIsInitializing(false); }

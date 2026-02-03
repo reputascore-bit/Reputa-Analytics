@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "npm run api & vite",
     "api": "tsx server/api-server.ts",
+    "test:protocol": "tsx server/reputa/protocol.test.ts",
     "build": "vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
@@ -16,6 +17,9 @@
     "@mui/icons-material": "7.3.5",
     "@mui/material": "7.3.5",
     "@popperjs/core": "2.11.8",
+    "axios": "^1.6.0",
+    "mongodb": "^6.0.0",
+    "dotenv": "^16.0.0",
     "@radix-ui/react-accordion": "1.2.3",
     "@radix-ui/react-alert-dialog": "1.1.6",
     "@radix-ui/react-aspect-ratio": "1.1.2",

@@ -1,6 +1,9 @@
 import express from 'express';   
 import cors from 'cors';
 import { Redis } from '@upstash/redis';
+import protocol from './reputa/protocol';
+// Start Reputa cron jobs (fetch & weekly merge placeholders)
+import './reputa/cron';
 
 const app = express();
 
@@ -14,6 +17,25 @@ const redis = new Redis({
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+async function writePointsLog(userId: string, payload: any) {
+  try {
+    const id = generateId();
+    const key = `points_log:${id}`;
+    const entry = { id, userId, ...payload };
+    await redis.set(key, JSON.stringify(entry));
+    // also push to user-specific list for quick lookup
+    try {
+      await (redis as any).lpush(`points_logs:${userId}`, id);
+    } catch (e) {
+      // not critical if lpush missing
+    }
+    return entry;
+  } catch (error) {
+    console.error('[POINTS_LOG] write error', error);
+    return null;
+  }
 }
 
 interface ReputationData {
@@ -83,13 +105,11 @@ async function saveReputationData(data: ReputationData): Promise<boolean> {
 }
 
 function calculateLevel(score: number): number {
-  if (score >= 10000) return 7;
-  if (score >= 5000) return 6;
-  if (score >= 2000) return 5;
-  if (score >= 1000) return 4;
-  if (score >= 500) return 3;
-  if (score >= 100) return 2;
-  return 1;
+  try {
+    return protocol.calculateLevelFromPoints(score);
+  } catch (e) {
+    return 1;
+  }
 }
 
 app.get('/api/reputation', async (req, res) => {
@@ -237,6 +257,14 @@ app.post('/api/reputation', async (req, res) => {
     data.scoreEvents.unshift(scoreEvent);
     data.scoreEvents = data.scoreEvents.slice(0, 100);
 
+    // persist points log
+    await writePointsLog(uid, {
+      source_type: 'ad_bonus',
+      points: bonusPoints,
+      timestamp: scoreEvent.timestamp,
+      metadata: { description: scoreEvent.description }
+    });
+
     await saveReputationData(data);
     console.log(`[AD BONUS] User ${uid}, Points: ${bonusPoints}`);
 
@@ -267,50 +295,32 @@ app.post('/api/reputation', async (req, res) => {
       walletAge: walletData?.walletAge || 0,
     };
 
-    const previousSnapshot = data.walletSnapshots[0];
-    let deltaPoints = 0;
-    const deltaDetails: string[] = [];
+    const previousSnapshot = data.walletSnapshots[0] || null;
+    const { delta, details } = protocol.walletScanDelta(previousSnapshot, newSnapshot);
 
-    if (!previousSnapshot) {
-      if (newSnapshot.transactionCount > 0) {
-        const txPoints = Math.min(newSnapshot.transactionCount * 5, 100);
-        deltaPoints += txPoints;
-        deltaDetails.push(`Initial transactions: +${txPoints}`);
-      }
-      if (newSnapshot.walletAge > 0) {
-        const agePoints = Math.min(Math.floor(newSnapshot.walletAge / 30) * 10, 50);
-        deltaPoints += agePoints;
-        deltaDetails.push(`Wallet age: +${agePoints}`);
-      }
-    } else {
-      const txDiff = newSnapshot.transactionCount - previousSnapshot.transactionCount;
-      if (txDiff > 0) {
-        const txPoints = Math.min(txDiff * 5, 50);
-        deltaPoints += txPoints;
-        deltaDetails.push(`New transactions (${txDiff}): +${txPoints}`);
-      }
-      const contactsDiff = newSnapshot.contactsCount - previousSnapshot.contactsCount;
-      if (contactsDiff > 0) {
-        const contactsPoints = Math.min(contactsDiff * 2, 20);
-        deltaPoints += contactsPoints;
-        deltaDetails.push(`New contacts (${contactsDiff}): +${contactsPoints}`);
-      }
-    }
-
-    if (deltaPoints > 0) {
+    if (delta > 0) {
       const scoreEvent = {
         id: generateId(),
         type: 'wallet_scan',
-        points: deltaPoints,
+        points: delta,
         timestamp: new Date(now).toISOString(),
-        description: deltaDetails.join(', ') || 'Wallet scan',
+        description: details.join(', ') || 'Wallet scan',
         metadata: { walletAddress, previousTxCount: previousSnapshot?.transactionCount || 0, newTxCount: newSnapshot.transactionCount },
       };
 
-      data.blockchainScore += deltaPoints;
-      data.totalReputationScore += deltaPoints;
+      data.blockchainScore += delta;
+      data.totalReputationScore += delta;
       data.reputationLevel = calculateLevel(data.totalReputationScore);
       data.scoreEvents.unshift(scoreEvent);
+
+      // persist points log
+      await writePointsLog(uid, {
+        source_type: 'wallet_scan',
+        walletAddress,
+        points: delta,
+        timestamp: scoreEvent.timestamp,
+        metadata: scoreEvent.metadata,
+      });
     }
 
     data.walletAddress = walletAddress;
@@ -341,6 +351,51 @@ app.post('/api/reputation', async (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Admin endpoints: weekly merge trigger and manual adjustments
+app.post('/api/admin/weekly-merge', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+  if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  try {
+    const { weeklyMerge } = await import('./reputa/cron');
+    await weeklyMerge();
+    return res.json({ success: true, message: 'Weekly merge triggered' });
+  } catch (err) {
+    console.error('[ADMIN] weekly-merge error', err);
+    return res.status(500).json({ error: 'Failed to run weekly merge' });
+  }
+});
+
+app.post('/api/admin/adjust', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'] || req.body.adminKey;
+  if (process.env.ADMIN_KEY && adminKey !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const { uid, points, reason } = req.body;
+  if (!uid || typeof points !== 'number') return res.status(400).json({ error: 'Missing uid or points' });
+
+  try {
+    const data = await getReputationData(uid);
+    data.totalReputationScore += points;
+    data.reputationLevel = calculateLevel(data.totalReputationScore);
+
+    const now = new Date().toISOString();
+    const scoreEvent = { id: generateId(), type: 'admin_adjust', points, timestamp: now, description: reason || 'Manual adjust' };
+    data.scoreEvents.unshift(scoreEvent);
+
+    await saveReputationData(data);
+    await writePointsLog(uid, { source_type: 'admin_adjust', points, timestamp: now, metadata: { reason } });
+
+    return res.json({ success: true, totalReputationScore: data.totalReputationScore, reputationLevel: data.reputationLevel });
+  } catch (err) {
+    console.error('[ADMIN] adjust error', err);
+    return res.status(500).json({ error: 'Failed to adjust user' });
+  }
 });
 
 // Pi Network Payment API - VIP payments and verification

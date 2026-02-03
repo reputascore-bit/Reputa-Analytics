@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, RefreshCw, Shield, ChevronDown, ChevronUp, Star, Zap } from 'lucide-react';
+import { Trophy, RefreshCw, ChevronDown, ChevronUp, Star, Zap } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
 import { TRUST_LEVEL_COLORS, AtomicTrustLevel } from '../../protocol/atomicScoring';
 
@@ -165,7 +165,6 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <Shield className="w-2.5 h-2.5 shrink-0" style={{ color: trustColor }} />
                     <span className="text-[10px] sm:text-[11px] font-mono font-bold text-white truncate">
                       {user.username || (user.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : `Pioneer_${user.uid.substring(0, 4)}`)}
                     </span>

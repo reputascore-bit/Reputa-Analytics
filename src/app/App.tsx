@@ -9,6 +9,7 @@ import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
+import { initializeUnifiedReputationOnLogin, getCachedReputation } from './services/reputationInitializer';
 import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -107,6 +108,19 @@ function ReputaAppContent() {
         localStorage.setItem('piUserId', user.uid);
         localStorage.setItem('piUsername', user.username);
         if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
+        
+        // Initialize unified reputation system
+        try {
+          await initializeUnifiedReputationOnLogin(
+            user.uid,
+            user.wallet_address || 'pending',
+            user.username
+          );
+          console.log('✅ Unified reputation system initialized');
+        } catch (error) {
+          console.error('Failed to initialize reputation system:', error);
+          // Continue anyway - reputation will be initialized later
+        }
         
         syncToAdmin(user.username, user.wallet_address || "Pending...");
         const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));

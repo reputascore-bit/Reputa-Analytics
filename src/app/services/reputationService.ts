@@ -759,6 +759,43 @@ export class ReputationService {
     };
   }
 
+  /**
+   * Return a cached unified score from localStorage synchronously to avoid UI flicker
+   */
+  getCachedUnifiedScore(uid?: string): UnifiedScoreData | null {
+    try {
+      const readUid = uid || this.uid;
+      if (!readUid) return null;
+      const stored = localStorage.getItem(`reputation_${readUid}`);
+      if (!stored) return null;
+      const parsed = JSON.parse(stored) as UserReputationState;
+      const totalScore = (parsed.blockchainScore || 0) + (parsed.dailyCheckInPoints || 0);
+      const levelInfo = parsed ? ({ level: 1, rank: 'Low Trust', progressPercent: 0, pointsToNext: 100 } as any) : null;
+      const colors = levelInfo ? { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' } : { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' };
+
+      return {
+        totalScore,
+        blockchainScore: parsed.blockchainScore || 0,
+        dailyCheckInPoints: parsed.dailyCheckInPoints || 0,
+        level: levelInfo.level || 1,
+        trustRank: levelInfo.rank || 'Low Trust',
+        atomicTrustLevel: (levelInfo.rank || 'Low Trust') as any,
+        progressPercent: levelInfo.progressPercent || 0,
+        pointsToNext: levelInfo.pointsToNext || 100,
+        maxScore: BACKEND_SCORE_CAP,
+        streak: parsed.streak || 0,
+        totalCheckInDays: parsed.totalCheckInDays || 0,
+        lastCheckIn: parsed.lastCheckIn || null,
+        lastUpdated: parsed.lastUpdated || null,
+        colors,
+        walletAddress: parsed.walletAddress,
+        uid: parsed.uid,
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   private getDefaultUnifiedScore(): UnifiedScoreData {
     const colors = TRUST_LEVEL_COLORS['Very Low Trust'];
     return {

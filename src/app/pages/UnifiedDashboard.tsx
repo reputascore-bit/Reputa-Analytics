@@ -113,7 +113,20 @@ export function UnifiedDashboard({
       if (isDemo) {
         reputationService.setDemoMode(true);
       }
-      
+
+      // load cached value first to avoid UI flicker
+      const cached = reputationService.getCachedUnifiedScore(uid);
+      if (cached) {
+        setUnifiedScoreData(cached);
+        setUserPoints({
+          total: cached.totalScore,
+          checkIn: cached.dailyCheckInPoints || 0,
+          transactions: 0,
+          activity: cached.blockchainScore || 0,
+          streak: cached.streak || 0,
+        });
+      }
+
       await reputationService.loadUserReputation(uid);
       const unified = reputationService.getUnifiedScore();
       setUnifiedScoreData(unified);

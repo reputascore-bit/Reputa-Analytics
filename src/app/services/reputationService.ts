@@ -308,6 +308,13 @@ export class ReputationService {
         };
         this.currentState = newState;
         this.saveLocalState(newState);
+        console.log('[ReputationService] performDailyCheckIn success', {
+          uid: this.uid,
+          pointsEarned: data.data.pointsEarned,
+          totalCheckInDays: newState.totalCheckInDays,
+          dailyCheckInPoints: newState.dailyCheckInPoints,
+          reputationScore: newState.reputationScore,
+        });
         return { success: true, pointsEarned: data.data.pointsEarned, newState };
       } else {
         return { success: false, pointsEarned: 0, newState: this.currentState };
@@ -373,6 +380,14 @@ export class ReputationService {
     this.saveLocalState(newState);
     this.addToSyncQueue('checkIn', { uid: this.uid, walletAddress: this.currentState.walletAddress });
     this.currentState = newState;
+
+    console.log('[ReputationService] performLocalCheckIn', {
+      uid: this.uid,
+      pointsEarned: totalPointsEarned,
+      totalCheckInDays: newState.totalCheckInDays,
+      dailyCheckInPoints: newState.dailyCheckInPoints,
+      reputationScore: newState.reputationScore,
+    });
 
     return { success: true, pointsEarned: totalPointsEarned, newState };
   }
@@ -508,6 +523,17 @@ export class ReputationService {
 
     const points = pointsToMerge || this.currentState.dailyCheckInPoints;
 
+    // enforce minimum days before allowing merge (server-side guard)
+    const MIN_MERGE_DAYS = 7;
+    if ((this.currentState.totalCheckInDays || 0) < MIN_MERGE_DAYS) {
+      console.log('[ReputationService] mergeCheckInPointsToReputation blocked - insufficient days', {
+        uid: this.uid,
+        totalCheckInDays: this.currentState.totalCheckInDays,
+        requiredDays: MIN_MERGE_DAYS,
+      });
+      return { success: false, newState: this.currentState };
+    }
+
     if (points <= 0) {
       return { success: false, newState: this.currentState };
     }
@@ -523,6 +549,12 @@ export class ReputationService {
         dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       };
       this.currentState = newState;
+      console.log('[ReputationService] mergeCheckInPointsToReputation (demo)', {
+        uid: this.uid,
+        merged: points,
+        reputationScore: newState.reputationScore,
+        dailyCheckInPoints: newState.dailyCheckInPoints,
+      });
       return { success: true, newState };
     }
 
@@ -545,6 +577,12 @@ export class ReputationService {
 
     this.currentState = newState;
     this.saveLocalState(newState);
+    console.log('[ReputationService] mergeCheckInPointsToReputation', {
+      uid: this.uid,
+      merged: points,
+      reputationScore: newState.reputationScore,
+      dailyCheckInPoints: newState.dailyCheckInPoints,
+    });
     return { success: true, newState };
   }
 

@@ -66,6 +66,11 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
     if (!state || state.dailyCheckInPoints <= 0) return;
 
     setIsMerging(true);
+    if (totalCheckInDays < MERGE_MIN_DAYS) {
+      // don't allow merging until minimum days reached
+      setIsMerging(false);
+      return;
+    }
     
     try {
       const pointsToMerge = state.dailyCheckInPoints;
@@ -101,9 +106,14 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
   const streak = safeNumber(state.streak);
   const dailyCheckInPoints = safeNumber(state.dailyCheckInPoints);
   const totalCheckInDays = safeNumber(state.totalCheckInDays);
-  const reputationScore = safeNumber(state.reputationScore);
+  // prefer unified protocol score as single source of truth
+  const unified = reputationService.getUnifiedScore();
+  const reputationScore = safeNumber(unified?.totalScore || state.reputationScore);
 
-  const canMerge = dailyCheckInPoints > 0;
+  // merge allowed only after a minimum number of check-in days
+  const MERGE_MIN_DAYS = 7;
+  const mergeDaysRemaining = Math.max(0, MERGE_MIN_DAYS - totalCheckInDays);
+  const canMerge = dailyCheckInPoints > 0 && totalCheckInDays >= MERGE_MIN_DAYS;
 
   return (
     <div 
@@ -195,21 +205,33 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
           </div>
         </div>
 
-        {canMerge && (
-          <button
-            onClick={handleMergePoints}
-            disabled={isMerging}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-          >
-            {isMerging ? (
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        {dailyCheckInPoints > 0 && (
+          <div>
+            {canMerge ? (
+              <button
+                onClick={handleMergePoints}
+                disabled={isMerging}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                {isMerging ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Merge className="w-4 h-4" />
+                    Merge {dailyCheckInPoints} pts to Reputation
+                  </>
+                )}
+              </button>
             ) : (
-              <>
+              <button
+                disabled
+                className="w-full py-2.5 rounded-xl bg-white/5 text-gray-300 font-bold text-xs flex items-center justify-center gap-2"
+              >
                 <Merge className="w-4 h-4" />
-                Merge {dailyCheckInPoints} pts to Reputation
-              </>
+                Merge locked — {mergeDaysRemaining} day(s) remaining
+              </button>
             )}
-          </button>
+          </div>
         )}
 
         <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px]">

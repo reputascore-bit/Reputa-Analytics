@@ -16,6 +16,7 @@ const TransactionList = React.lazy(async () => ({ default: (await import('../com
 const AuditReport = React.lazy(async () => ({ default: (await import('../components/AuditReport')).AuditReport }));
 const TopWalletsWidget = React.lazy(async () => ({ default: (await import('../components/widgets')).TopWalletsWidget }));
 const NetworkInfoPage = React.lazy(async () => ({ default: (await import('./NetworkInfoPage')).NetworkInfoPage }));
+const AtomicProtocolPage = React.lazy(async () => ({ default: (await import('./AtomicProtocolPage')).AtomicProtocolPage }));
 const TopWalletsPage = React.lazy(async () => ({ default: (await import('./TopWalletsPage')).TopWalletsPage }));
 const ReputationPage = React.lazy(async () => ({ default: (await import('./ReputationPage')).ReputationPage }));
 const ProfilePage = React.lazy(async () => ({ default: (await import('./ProfilePage')).ProfilePage }));
@@ -691,7 +692,7 @@ export function UnifiedDashboard({
         {activeSection === 'network' && (
           <>
             {networkSubPage === 'network-info' ? (
-              <NetworkInfoPage onBack={() => setNetworkSubPage(null)} />
+              <AtomicProtocolPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'top-wallets' ? (
               <TopWalletsPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'reputation' ? (

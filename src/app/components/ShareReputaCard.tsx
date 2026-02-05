@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';  
-import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle, Globe, TestTube } from 'lucide-react';
+import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle, Globe, TestTube, Zap } from 'lucide-react';
+import { ATOMIC_PROTOCOL_CONFIG, ATOMIC_TRUST_LEVEL_COLORS } from '../protocol/atomicProtocol';
 
 interface ShareReputaCardProps {
   username: string;

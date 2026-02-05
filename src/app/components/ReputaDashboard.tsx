@@ -12,6 +12,7 @@ import {
   type MiningData 
 } from '../protocol';
 import { createVIPPayment } from '../services/piPayments';
+import { reputationService } from '../services/reputationService';
 
 interface DashboardProps {
   walletAddress: string;
@@ -119,6 +120,11 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
 
   const { scores, walletData, stakingData, miningData, trustLevel, alerts } = report;
 
+  // Prefer unified protocol score as single source of truth (use cached to avoid flicker)
+  const cachedUnified = typeof window !== 'undefined' ? reputationService.getCachedUnifiedScore(userId) : null;
+  const displayedTotalScore = cachedUnified?.totalScore ?? scores.totalScore;
+  const displayedTrustLevel = cachedUnified?.atomicTrustLevel ?? trustLevel;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card className="max-w-6xl w-full p-6 my-8">
@@ -140,7 +146,7 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Reputation Score</p>
-              <p className="text-5xl font-bold text-cyan-600">{scores.totalScore}</p>
+              <p className="text-5xl font-bold text-cyan-600">{displayedTotalScore}</p>
               <p className="text-sm text-gray-500 mt-1">out of 1000</p>
             </div>
             <div className="text-right">
@@ -151,7 +157,7 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
                 'bg-red-100 text-red-700'
               }`}>
                 <Shield className="w-5 h-5" />
-                <span className="font-semibold">{trustLevel} Trust</span>
+                <span className="font-semibold">{displayedTrustLevel} Trust</span>
               </div>
             </div>
           </div>

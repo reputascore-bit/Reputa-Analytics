@@ -52,7 +52,16 @@ export function UnifiedReputationWidget({
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const loadReputation = useCallback(async () => {
-    setLoading(true);
+    // If we have a cached unified score, use it to avoid UI flicker
+    const cached = uid ? reputationService.getCachedUnifiedScore(uid) : null;
+    if (cached) {
+      setBlockchainScore(cached.blockchainScore || 0);
+      setCheckInPoints(cached.dailyCheckInPoints || 0);
+      setLastSync(cached.lastUpdated || null);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     try {
       if (uid) {
         const state = await reputationService.loadUserReputation(uid, walletAddress);

@@ -429,7 +429,15 @@ export function UnifiedDashboard({
               <div className="glass-card p-4 hover:border-cyan-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }} onClick={() => setActiveSection('analytics')}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-                    <LineChart className="w-5 h-5 text-white" />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <PointsExplainer
+                        currentPoints={userPoints.total}
+                        checkInPoints={userPoints.checkIn}
+                        transactionPoints={userPoints.transactions}
+                        activityPoints={userPoints.activity}
+                        streakBonus={userPoints.streak}
+                      />
+                    </div>
                   </div>
                   <div>
                     <p className="text-[9px] font-bold text-gray-400 uppercase">Analytics</p>
@@ -487,13 +495,6 @@ export function UnifiedDashboard({
                       <p className="text-2xl font-black text-white">{userPoints.total.toLocaleString()}</p>
                     </div>
                   </div>
-                  <PointsExplainer 
-                    currentPoints={userPoints.total}
-                    checkInPoints={userPoints.checkIn}
-                    transactionPoints={userPoints.transactions}
-                    activityPoints={userPoints.activity}
-                    streakBonus={userPoints.streak}
-                  />
                 </div>
                 
                 <div className="grid grid-cols-3 gap-2 mt-4">

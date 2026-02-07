@@ -9,14 +9,10 @@ jobs:
   git-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
       - name: Sync to Account A
         uses: wei/git-sync@v3
         with:
+          source_repo: "https://reputascore-bit:${{ secrets.Vercel_Sync }}@github.com/reputascore-bit/Reputa-Analytics.git"
           source_branch: "main"
-          destination_branch: "main"
           destination_repo: "https://reputascore-bit:${{ secrets.Vercel_Sync }}@github.com/Mediceberg/Reputa-Analytics.git"
+          destination_branch: "main"

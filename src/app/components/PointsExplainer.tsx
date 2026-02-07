@@ -141,7 +141,7 @@ export function PointsExplainer({
 
               <div className="max-h-[60vh] overflow-y-auto">
                 <div className="p-4 space-y-4 pb-8">
-              <div 
+                  <div 
                 className="p-4 rounded-xl"
                 style={{
                   background: 'rgba(20, 22, 30, 0.8)',
@@ -315,7 +315,7 @@ export function PointsExplainer({
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </>
   );

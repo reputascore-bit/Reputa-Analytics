@@ -16,7 +16,7 @@ jobs:
 
       - name: Push to Account A
         env:
-          GITHUB_TOKEN: ${{ secrets.Vercel_Sync }}
+          GITHUB_TOKEN: ${{ secrets.VERCEL_SYNC }}
         run: |
           git config --global user.name "reputascore-bit"
           git config --global user.email "reputa.score@gmail.com"

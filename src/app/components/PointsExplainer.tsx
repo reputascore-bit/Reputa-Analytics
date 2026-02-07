@@ -105,10 +105,10 @@ export function PointsExplainer({
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setOpen(false)} />
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 pointer-events-none">
+          <div className="fixed inset-0 z-40 bg-black/30 pointer-events-auto" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-20 pointer-events-none">
             <div
-              className="pointer-events-auto w-full max-w-3xl mx-4 rounded-xl overflow-hidden flex flex-col"
+              className="pointer-events-auto w-full max-w-3xl mx-3 sm:mx-4 rounded-xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[80vh]"
               style={{ background: 'rgba(15, 17, 23, 0.98)', border: '1px solid rgba(255,255,255,0.06)' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -139,8 +139,8 @@ export function PointsExplainer({
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                <div className="p-4 space-y-4 pb-8">
                   {/* Current Level Card */}
                   <div
                     className="p-4 rounded-xl"

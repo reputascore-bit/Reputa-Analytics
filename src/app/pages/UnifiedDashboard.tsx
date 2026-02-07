@@ -48,7 +48,7 @@ import {
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
   PieChart, LineChart, AlertTriangle, Coins, RefreshCw, Lock,
   Languages, ChevronDown, Calendar, CheckCircle, Award, Star,
-  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon, TestTube, AlertCircle
+  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon, TestTube, AlertCircle, Info
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -169,6 +169,7 @@ export function UnifiedDashboard({
   const [portfolioData, setPortfolioData] = useState<ChartDataPoint[]>([]);
   const [score, setScore] = useState<ChartReputationScore | null>(null);
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
 
   useEffect(() => {
     const { transactions, score: mockScore, tokens: mockTokens } = generateMockChartData();
@@ -426,22 +427,14 @@ export function UnifiedDashboard({
                 </div>
               </div>
 
-              <div className="glass-card p-4 hover:border-cyan-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }} onClick={() => setActiveSection('analytics')}>
+              <div className="glass-card p-4 hover:border-cyan-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }} onClick={() => setPointsModalOpen(true)}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <PointsExplainer
-                        currentPoints={userPoints.total}
-                        checkInPoints={userPoints.checkIn}
-                        transactionPoints={userPoints.transactions}
-                        activityPoints={userPoints.activity}
-                        streakBonus={userPoints.streak}
-                      />
-                    </div>
+                    <Info className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <p className="text-[9px] font-bold text-gray-400 uppercase">Analytics</p>
-                    <p className="font-bold text-white">View Charts</p>
+                    <p className="font-bold text-white">How Points Work</p>
                   </div>
                 </div>
               </div>
@@ -470,6 +463,18 @@ export function UnifiedDashboard({
                 </div>
               </div>
             </div>
+
+            <Suspense fallback={null}>
+              <PointsExplainer
+                controlledOpen={pointsModalOpen}
+                setControlledOpen={setPointsModalOpen}
+                currentPoints={userPoints.total}
+                checkInPoints={userPoints.checkIn}
+                transactionPoints={userPoints.transactions}
+                activityPoints={userPoints.activity}
+                streakBonus={userPoints.streak}
+              />
+            </Suspense>
 
             {/* Daily Check-in & Points Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

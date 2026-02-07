@@ -14,6 +14,9 @@ interface PointsExplainerProps {
   transactionPoints?: number;
   activityPoints?: number;
   streakBonus?: number;
+  /** If provided, component becomes controlled by parent */
+  controlledOpen?: boolean;
+  setControlledOpen?: (v: boolean) => void;
 }
 
 const SCORE_CAP = getBackendScoreCap();
@@ -66,9 +69,11 @@ export function PointsExplainer({
   checkInPoints = 0, 
   transactionPoints = 0, 
   activityPoints = 0,
-  streakBonus = 0 
+  streakBonus = 0,
+  controlledOpen,
+  setControlledOpen
 }: PointsExplainerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const { t } = useLanguage();
 
   const levelProgress = getLevelProgress(currentPoints);
@@ -76,56 +81,66 @@ export function PointsExplainer({
   
   const nextLevelData = levelProgress.nextLevel ? LEVELS.find(l => l.name === levelProgress.nextLevel) : null;
 
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (v: boolean) => {
+    if (typeof setControlledOpen === 'function') setControlledOpen(v);
+    else setInternalOpen(v);
+  };
+
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        aria-label="Learn how points are calculated"
-        className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-        style={{
-          background: currentLevelColors.bg,
-          border: `1px solid ${currentLevelColors.border}`,
-        }}
-      >
-        <Info className="w-4 h-4" style={{ color: currentLevelColors.text }} />
-        <span className="text-xs font-bold" style={{ color: currentLevelColors.text }}>How Points Work</span>
-      </button>
+      {!setControlledOpen && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Learn how points are calculated"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          style={{
+            background: currentLevelColors.bg,
+            border: `1px solid ${currentLevelColors.border}`,
+          }}
+        >
+          <Info className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+          <span className="text-xs font-bold" style={{ color: currentLevelColors.text }}>How Points Work</span>
+        </button>
+      )}
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#0A0B0F' }}>
-          <div 
-            className="flex-shrink-0 px-4 py-3 flex items-center gap-3 border-b"
-            style={{ 
-              background: 'rgba(15, 17, 23, 0.98)',
-              borderColor: 'rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            <button
-              onClick={() => setIsOpen(false)}
-              aria-label="Go back"
-              className="p-2 -ml-2 rounded-lg hover:bg-white/5 transition-all"
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setOpen(false)} />
+
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 pointer-events-none">
+            <div
+              className="pointer-events-auto w-full max-w-3xl mx-4 rounded-xl overflow-hidden"
+              style={{ background: 'rgba(15, 17, 23, 0.98)', border: `1px solid rgba(255,255,255,0.06)` }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <ChevronLeft className="w-5 h-5 text-white/70" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{
-                  background: currentLevelColors.bg,
-                  border: `1px solid ${currentLevelColors.border}`,
-                }}
-              >
-                <Zap className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+              <div className="flex-shrink-0 px-4 py-3 flex items-center gap-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Go back"
+                  className="p-2 -ml-2 rounded-lg hover:bg-white/5 transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5 text-white/70" />
+                </button>
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{
+                      background: currentLevelColors.bg,
+                      border: `1px solid ${currentLevelColors.border}`,
+                    }}
+                  >
+                    <Zap className="w-4 h-4" style={{ color: currentLevelColors.text }} />
+                  </div>
+                  <div>
+                    <h1 className="text-sm font-bold text-white">Points System</h1>
+                    <p className="text-[10px] text-white/40">Atomic Scoring Protocol</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h1 className="text-sm font-bold text-white">Points System</h1>
-                <p className="text-[10px] text-white/40">Atomic Scoring Protocol</p>
-              </div>
-            </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4 space-y-4 pb-8">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <div className="p-4 space-y-4 pb-8">
               <div 
                 className="p-4 rounded-xl"
                 style={{

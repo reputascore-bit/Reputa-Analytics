@@ -3,14 +3,7 @@
 // without runtime import errors.
 // Types from mongodb for compile-time checks
 import type { Db, Collection } from 'mongodb';
-
-let MongoClient: any;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  MongoClient = require('mongodb').MongoClient;
-} catch (e) {
-  MongoClient = null;
-}
+import { MongoClient } from 'mongodb';
 
 type AnyCollection = any;
 interface ReputaDatabase {

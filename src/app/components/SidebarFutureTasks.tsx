@@ -16,9 +16,8 @@ export function SidebarFutureTasks() {
     []
   );
 
-  if (!FUTURE_TASKS_CONFIG.enabled || tasks.length === 0) {
-    return null;
-  }
+  // Always show section in UI placeholder mode
+const isFeatureActive = FUTURE_TASKS_CONFIG.enabled;
 
   const handleClaim = (task: FutureTaskDefinition) => {
     if (task.verification.status !== 'verified' || claimedTasks[task.id]) {
